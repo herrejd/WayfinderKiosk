@@ -1,0 +1,36 @@
+{
+  "common": {
+    "back": "Back",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Try Again",
+    "noResults": "No results found"
+  },
+  "idle": {
+    "title": "Airport Wayfinder",
+    "subtitle": "Your Navigation Assistant",
+    "findGate": "Find Your Gate",
+    "directory": "Browse Directory",
+    "touchPrompt": "Touch to begin"
+  },
+  "gateFinder": {
+    "title": "Find Your Gate",
+    "scanPrompt": "Scan your boarding pass",
+    "manualEntry": "Or enter flight number",
+    "flightPlaceholder": "e.g., AA1234",
+    "searchButton": "Search Gate",
+    "gateResult": "Your gate is",
+    "walkingTime": "Walking time",
+    "minutes": "minutes",
+    "navigate": "Navigate to Gate"
+  },
+  "directory": {
+    "title": "Airport Directory",
+    "shop": "Shop",
+    "dine": "Dine",
+    "relax": "Relax",
+    "searchPlaceholder": "Search locations...",
+    "getDirections": "Get Directions"
+  }
+}

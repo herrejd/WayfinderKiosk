@@ -1,0 +1,36 @@
+{
+  "common": {
+    "back": "Retour",
+    "search": "Rechercher",
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "retry": "Réessayer",
+    "noResults": "Aucun résultat trouvé"
+  },
+  "idle": {
+    "title": "Orientation à l'Aéroport",
+    "subtitle": "Votre Assistant de Navigation",
+    "findGate": "Trouvez votre Porte",
+    "directory": "Parcourir l'Annuaire",
+    "touchPrompt": "Touchez pour commencer"
+  },
+  "gateFinder": {
+    "title": "Trouvez votre Porte",
+    "scanPrompt": "Scannez votre carte d'embarquement",
+    "manualEntry": "Ou entrez le numéro de vol",
+    "flightPlaceholder": "p. ex., AA1234",
+    "searchButton": "Rechercher la Porte",
+    "gateResult": "Votre porte est",
+    "walkingTime": "Temps de marche",
+    "minutes": "minutes",
+    "navigate": "Naviguer vers la Porte"
+  },
+  "directory": {
+    "title": "Annuaire de l'Aéroport",
+    "shop": "Boutique",
+    "dine": "Restaurant",
+    "relax": "Détente",
+    "searchPlaceholder": "Rechercher des lieux...",
+    "getDirections": "Obtenir des Directions"
+  }
+}

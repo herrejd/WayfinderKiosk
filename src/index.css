@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Kiosk-specific CSS */
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Allow text selection only in specific content areas */
+.selectable,
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Disable pinch-zoom on touch devices */
+input[type="number"] {
+  touch-action: manipulation;
+}
+
+/* Prevent rubber band effect on iOS */
+body {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Disable long press context menu on mobile */
+button,
+a {
+  -webkit-touch-callout: none;
+}
+
+/* Ensure video/camera elements work properly */
+video,
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* High contrast mode */
+body.high-contrast {
+  --tw-bg-opacity: 1;
+  filter: contrast(1.2);
+}
+body.high-contrast * {
+  border-color: currentColor !important;
+}
+
+/* Large text mode */
+body.large-text {
+  font-size: 125%;
+}
+body.large-text button {
+  font-size: 125%;
+}
