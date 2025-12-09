@@ -70,12 +70,16 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
 
   // Cleanup on unmount
   useEffect(() => {
+    // Return a cleanup function that will be called when the component unmounts
     return () => {
-      wayfinderService.destroy();
-      initStartedRef.current = false;
-      navigationShownRef.current = false;
+      // Only attempt to destroy if the map was successfully initialized.
+      if (mapReady) {
+        wayfinderService.destroyFullscreen();
+        initStartedRef.current = false;
+        navigationShownRef.current = false;
+      }
     };
-  }, []);
+  }, [mapReady]);
 
   // Handle navigation display AFTER map is ready
   useEffect(() => {
@@ -115,16 +119,16 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
         // The `showNavigation` function automatically displays the route and UI
         // as described in the `wayfinder-integration-guide.md`.
         const sdkMap = map as any;
-        if (typeof sdkMap.showNavigation === 'function') {
-          sdkMap.showNavigation(
-            kioskLocation, // from: kiosk location { lat, lng, floorId }
-            { poiId: poiIdStr }, // to: destination POI
-            false // accessible route
-          );
-          console.log('`showNavigation` called successfully.');
+        if (typeof sdkMap.fire === 'function') {
+          sdkMap.fire('showNavigation', {
+            from: kioskLocation, // from: kiosk location { lat, lng, floorId }
+            to: { poiId: poiIdStr }, // to: destination POI
+            accessible: false, // accessible route
+          });
+          console.log('`fire("showNavigation")` called successfully.');
           navigationShownRef.current = true;
         } else {
-          console.error('`map.showNavigation()` is not available. Check SDK map instance.');
+          console.error('`map.fire()` is not available. Check SDK map instance.');
         }
       } catch (err) {
         console.error('Error calling `showNavigation`:', err);

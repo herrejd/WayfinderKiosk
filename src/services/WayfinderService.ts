@@ -108,8 +108,9 @@ class WayfinderService {
    * @param container - CSS selector for the container element
    */
   async initFullscreen(container: string): Promise<WayfinderMap> {
+    // If instance exists, destroy it before creating a new one
     if (this.fullscreenInstance) {
-      return this.fullscreenInstance;
+      this.destroyFullscreen();
     }
 
     const LMInit = await this.loadSDK();
@@ -186,22 +187,37 @@ class WayfinderService {
   }
 
   /**
-   * Destroy all map instances and clean up resources
-   * Should be called when the application unmounts
+   * Destroy only the fullscreen map instance.
+   * This is called by the map component on unmount.
    */
-  destroy(): void {
+  destroyFullscreen(): void {
     if (this.fullscreenInstance) {
       try {
-        this.fullscreenInstance.destroy();
+        // Use the 'fire' method, as direct calls are not working
+        if (typeof (this.fullscreenInstance as any).fire === 'function') {
+          (this.fullscreenInstance as any).fire('destroy');
+          console.log('Fullscreen map instance destroyed via fire().');
+        } else {
+          console.warn('destroyFullscreen: .fire() method not found on instance.');
+        }
       } catch (error) {
         console.error('Error destroying fullscreen instance:', error);
       }
       this.fullscreenInstance = null;
     }
+  }
+
+  /**
+   * Destroy all map instances and clean up resources
+   * Should be called when the application unmounts
+   */
+  destroy(): void {
+    this.destroyFullscreen();
 
     if (this.headlessInstance) {
       try {
         this.headlessInstance.destroy();
+        console.log('Headless map instance destroyed.');
       } catch (error) {
         console.error('Error destroying headless instance:', error);
       }
