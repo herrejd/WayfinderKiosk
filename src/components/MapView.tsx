@@ -4,28 +4,48 @@
  */
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useKioskStore } from '@/store/kioskStore';
 import { WayfinderMap } from './WayfinderMap';
+import { wayfinderService } from '@/services';
+import { parseFloorId } from '@/utils/floorParser';
 
 export const MapView: React.FC = () => {
-  const navigate = useNavigate();
   const selectedPOI = useKioskStore((state) => state.selectedPOI);
   const selectPOI = useKioskStore((state) => state.selectPOI);
   const setNavigating = useKioskStore((state) => state.setNavigating);
   const setView = useKioskStore((state) => state.setView);
+  const setMapVisible = useKioskStore((state) => state.setMapVisible);
 
   const handleBack = () => {
-    setNavigating(false);
-    selectPOI(null);
-    navigate('/');
+    // Call resetMap() directly on the map instance
+    const map = wayfinderService.getInstance();
+    if (map) {
+      map.resetMap();
+    }
+
+    // Delay the state update to allow the map to process the reset command
+    setTimeout(() => {
+      setNavigating(false);
+      selectPOI(null);
+      setMapVisible(false);
+      setView('idle');
+    }, 100);
   };
 
   const handleClearRoute = () => {
-    selectPOI(null);
-    setNavigating(false);
-    setView('directory');
-    navigate('/directory');
+    // Call resetMap() directly on the map instance
+    const map = wayfinderService.getInstance();
+    if (map) {
+      map.resetMap();
+    }
+
+    // Delay the state update to allow the map to process the reset command
+    setTimeout(() => {
+      selectPOI(null);
+      setNavigating(false);
+      setMapVisible(false);
+      setView('directory');
+    }, 100);
   };
 
   const handleMapReady = () => {
@@ -146,7 +166,7 @@ export const MapView: React.FC = () => {
                     d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
                   />
                 </svg>
-                Floor: {selectedPOI.floor}
+                {parseFloorId(selectedPOI.floor)}
               </span>
               {selectedPOI.distanceMeters && (
                 <span className="flex items-center gap-2 text-lg">

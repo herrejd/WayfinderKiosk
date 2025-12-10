@@ -22,7 +22,7 @@ A single-page web application for airport wayfinding and navigation, designed to
 ✅ **Requirements Gathering**: Full understanding of project scope
 ✅ **Architecture Planning**: Complete technical architecture defined
 ✅ **API Documentation**: Full Atrius Wayfinder JS SDK API documented
-✅ **Integration Strategy**: Dual-instance pattern (headless + fullscreen)
+✅ **Integration Strategy**: ⚠️ **DEVIATION**: Single-instance pattern (shared map). The dual-instance plan caused SDK conflicts; a single shared instance is used for both data and UI.
 ✅ **POI Category Strategy**: Category prefixes identified for Shop/Dine/Relax tabs
 ✅ **Service Layer Design**: Complete service architecture with code examples
 ✅ **Component Structure**: React component hierarchy planned
@@ -39,7 +39,7 @@ A single-page web application for airport wayfinding and navigation, designed to
 2. Set up project structure with folders
 3. Install dependencies
 4. Create base service layer (WayfinderService, DirectoryService, GateFinderService)
-5. Set up routing with React Router
+5. Set up state-based navigation using Zustand (replaces React Router)
 6. Create basic component structure
 
 📋 **Detailed Guide Available**: See `wayfinder-integration-guide.md` for complete API reference and implementation examples
@@ -51,7 +51,7 @@ A single-page web application for airport wayfinding and navigation, designed to
 ### Current State Summary
 We have completed all planning and documentation. The Atrius Wayfinder JS SDK has been fully explored and documented. We understand:
 - The SDK uses ES6 module imports from `https://maps.locuslabs.com/sdk/LocusMapsSDK.js`
-- Two instances needed: headless (data fetching) + fullscreen (interactive map)
+- ⚠️ **DEVIATION**: A single, shared fullscreen instance is used for both data fetching and interactive display, replacing the original dual-instance plan.
 - POI categories use dot notation: `eat.bar`, `shop.retail`, etc.
 - Complete API available in `wayfinder-integration-guide.md`
 
@@ -60,7 +60,7 @@ We have completed all planning and documentation. The Atrius Wayfinder JS SDK ha
 - **Build Tool**: Vite (for speed and modern ESM support)
 - **Styling**: Tailwind CSS (rapid WCAG-compliant styling)
 - **State Management**: Zustand (lightweight, performant, avoids Context re-render issues)
-- **Routing**: React Router v6 with hash routing
+- **Routing**: ⚠️ **DEVIATION**: State-based routing managed by Zustand (Replaced React Router for kiosk stability).
 - **Offline/PWA**: vite-plugin-pwa with service worker caching
 - **Kiosk Shell**: Electron wrapper for full kiosk control
 - **Accessibility**: WCAG 2.2 Level AA compliance mandatory
@@ -215,16 +215,32 @@ export const useKioskStore = create<KioskState>((set) => ({
 }));
 ```
 
-**App.tsx** - Main routing structure:
+**App.tsx** - Main application structure:
 ```typescript
-// Hash routing for kiosk reliability
-<HashRouter>
-  <Routes>
-    <Route path="/" element={<IdleScreen />} />
-    <Route path="/gate-finder" element={<GateFinder />} />
-    <Route path="/directory" element={<Directory />} />
-  </Routes>
-</HashRouter>
+// App.tsx now uses state to conditionally render views.
+// The MapView is always mounted but its visibility is toggled with CSS.
+// This avoids re-initializing the map and solves lifecycle issues.
+
+function AppLayout() {
+  const currentView = useKioskStore(state => state.currentView);
+  const isMapVisible = useKioskStore(state => state.isMapVisible);
+
+  return (
+    <div className="w-full h-full">
+      {/* Non-map views are hidden when the map is visible */}
+      <div className={isMapVisible ? 'hidden' : 'w-full h-full'}>
+        {currentView === 'idle' && <IdleScreen />}
+        {currentView === 'directory' && <Directory />}
+        {/* ...etc */}
+      </div>
+
+      {/* MapView is always mounted, but hidden via CSS */}
+      <div className={isMapVisible ? 'visible' : 'hidden'}>
+        <MapView />
+      </div>
+    </div>
+  );
+}
 ```
 
 ### SDK Integration Notes
@@ -232,26 +248,41 @@ export const useKioskStore = create<KioskState>((set) => ({
 **Important**: The Atrius Wayfinder SDK:
 - Loads from CDN: `https://maps.locuslabs.com/sdk/LocusMapsSDK.js`
 - Returns `LMInit` object with `newMap()` method
-- Requires container with defined height for fullscreen mode
-- Headless mode doesn't need container (pass `null`)
+- Requires container with defined height for the map
 - Call `.destroy()` on unmount to prevent memory leaks
 
-**Dual Instance Pattern**:
-```typescript
-// Initialize headless for data
-const headless = await LMInit.newMap(null, {
-  venueId: 'airport',
-  accountId: 'id',
-  headless: true
-});
+**⚠️ DEVIATION: Single Instance Pattern**:
+The original dual-instance plan was replaced with a more stable single-instance pattern.
 
-// Initialize fullscreen for UI
-const fullscreen = await LMInit.newMap('.map-container', {
-  venueId: 'airport',
-  accountId: 'id',
-  headless: false
-});
+```typescript
+// WayfinderService.ts now manages only ONE instance.
+class WayfinderService {
+  private instance: WayfinderMap | null = null;
+
+  async init(container: string) {
+    // ... logic to initialize the single map instance
+    this.instance = await LMInit.newMap(container, config);
+    return this.instance;
+  }
+
+  getInstance() {
+    return this.instance;
+  }
+}
+
+// DirectoryService.ts now waits for this instance to be ready.
+class DirectoryService {
+  private async getMapInstance() {
+    // ... logic to wait until wayfinderService.getInstance() is not null
+  }
+
+  async fetchAllPOIs() {
+    const map = await this.getMapInstance();
+    // ... use the single, shared map instance
+  }
+}
 ```
+This change was critical to prevent SDK conflicts and ensure reliable operation.
 
 ### POI Category Mapping (Critical for Directory)
 

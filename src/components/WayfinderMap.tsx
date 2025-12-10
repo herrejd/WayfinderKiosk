@@ -24,6 +24,7 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const selectedPOI = useKioskStore((state) => state.selectedPOI);
+  const setInitialMapState = useKioskStore((state) => state.setInitialMapState);
   const initStartedRef = useRef(false);
   const navigationShownRef = useRef(false);
 
@@ -37,26 +38,17 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
         try {
           setIsLoading(true);
           setError(null);
-
-          // Create unique ID for the container
           const containerId = 'wayfinder-map-container';
           node.id = containerId;
-
           console.log('Initializing Wayfinder map...');
-
-          // Initialize fullscreen map instance
-          await wayfinderService.initFullscreen(`#${containerId}`);
-
+          await wayfinderService.init(`#${containerId}`);
           console.log('Wayfinder map initialized successfully');
-
           setIsLoading(false);
           setMapReady(true);
           onMapReady?.();
         } catch (err) {
           const error = err instanceof Error ? err : new Error('Failed to initialize map');
           console.error('Error initializing Wayfinder map:', error);
-          console.error('Full error details:', err);
-
           setError(error);
           setIsLoading(false);
           onError?.(error);
@@ -70,193 +62,110 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
 
   // Cleanup on unmount
   useEffect(() => {
-    // Return a cleanup function that will be called when the component unmounts
     return () => {
-      // Only attempt to destroy if the map was successfully initialized.
       if (mapReady) {
-        wayfinderService.destroyFullscreen();
+        wayfinderService.destroy();
         initStartedRef.current = false;
         navigationShownRef.current = false;
       }
     };
   }, [mapReady]);
 
-  // Handle navigation display AFTER map is ready
+  // Effect to capture the initial map state, runs only when map is first ready.
   useEffect(() => {
-    // Wait until map is ready
-    if (!mapReady || !showNavigation || !selectedPOI) {
-      return;
-    }
+    if (!mapReady) return;
 
-    // Prevent showing navigation multiple times for same POI
-    if (navigationShownRef.current) {
-      return;
-    }
+    const map = wayfinderService.getInstance();
+    if (!map) return;
 
-    const map = wayfinderService.getFullscreen();
-    if (!map) {
-      console.error('Map instance not available');
-      return;
-    }
+    // Check if we already have a saved state
+    const hasInitialState = useKioskStore.getState().initialMapState;
+    if (hasInitialState) return;
 
-    const fire = (map as any).fire;
     const on = (map as any).on;
+    if (typeof on !== 'function') return;
 
-    // Convert POI ID to integer - SDK expects integer
-    const poiIdStr = selectedPOI.id;
-    // The SDK uses string POI IDs, so parseInt is not needed for showNavigation.
-    // const poiIdInt = parseInt(poiIdStr, 10); 
-    const kioskLocation = wayfinderService.getKioskLocation();
+    let hasCaptured = false;
+    const initialMoveHandler = () => {
+      if (!hasCaptured) {
+        hasCaptured = true;
+        const stateId = (map as any).getState();
+        if (stateId) {
+          setInitialMapState(stateId);
+          console.log('Initial map state saved.');
+        }
+      }
+    };
 
-    const showRoute = async () => {
-      if (navigationShownRef.current) return;
+    on.call(map, 'moveEnd', initialMoveHandler);
 
+    // Fallback in case moveEnd doesn't fire
+    const fallback = setTimeout(() => {
+      if (!hasCaptured) {
+        hasCaptured = true;
+        const stateId = (map as any).getState();
+        if (stateId) {
+          setInitialMapState(stateId);
+          console.log('Initial map state saved (via fallback).');
+        }
+      }
+    }, 4000);
+
+    return () => clearTimeout(fallback);
+  }, [mapReady, setInitialMapState]);
+
+  // Effect to handle showing navigation when a POI is selected
+  useEffect(() => {
+    // Reset flag if POI is cleared
+    if (!selectedPOI) {
+      navigationShownRef.current = false;
+      return;
+    }
+
+    if (!mapReady || !showNavigation || navigationShownRef.current) {
+      return;
+    }
+
+    const map = wayfinderService.getInstance();
+    if (!map) return;
+
+    const on = (map as any).on;
+    if (typeof on !== 'function') return;
+
+    const showRoute = () => {
+      if (navigationShownRef.current || !selectedPOI) return;
+      navigationShownRef.current = true;
+
+      const poiIdStr = selectedPOI.id;
+      const kioskLocation = wayfinderService.getKioskLocation();
       console.log('=== Calling showNavigation ===');
-      console.log('From Kiosk Location:', kioskLocation);
-      console.log('To POI ID:', poiIdStr);
 
       try {
-        // The `showNavigation` function automatically displays the route and UI
-        // as described in the `wayfinder-integration-guide.md`.
         const sdkMap = map as any;
-        if (typeof sdkMap.fire === 'function') {
-          sdkMap.fire('showNavigation', {
-            from: kioskLocation, // from: kiosk location { lat, lng, floorId }
-            to: { poiId: poiIdStr }, // to: destination POI
-            accessible: false, // accessible route
-          });
-          console.log('`fire("showNavigation")` called successfully.');
-          navigationShownRef.current = true;
+        if (typeof sdkMap.showNavigation === 'function') {
+          sdkMap.showNavigation(kioskLocation, { poiId: poiIdStr }, false);
+          console.log('Direct call to `showNavigation` completed.');
         } else {
-          console.error('`map.fire()` is not available. Check SDK map instance.');
+          console.error('`map.showNavigation()` is not a direct function.');
         }
       } catch (err) {
         console.error('Error calling `showNavigation`:', err);
       }
-
-      /* --- OLD CODE: MANUAL ROUTE DRAWING ---
-      if (navigationShownRef.current) return;
-
-      console.log('=== Getting Directions and Drawing Route ===');
-      console.log('From:', kioskLocation);
-      console.log('To POI ID:', poiIdInt);
-
-      try {
-        // Get directions data
-        if (typeof (map as any).getDirections !== 'function') {
-          console.error('getDirections not available');
-          return;
-        }
-
-        console.log('Calling getDirections...');
-        const directions = await (map as any).getDirections(
-          { lat: kioskLocation.lat, lng: kioskLocation.lng, floorId: kioskLocation.floorId },
-          { poiId: poiIdInt },
-          false // accessible
-        );
-
-        console.log('Directions received:', directions);
-        console.log('Distance:', directions?.distance, 'meters');
-        console.log('Time:', directions?.time, 'minutes');
-        console.log('Steps:', directions?.steps?.length);
-        console.log('Waypoints:', directions?.waypoints?.length);
-
-        // Draw the route using waypoints
-        if (directions?.waypoints && directions.waypoints.length > 0) {
-          // Convert waypoints to coordinate pairs for drawLines
-          // Waypoints format varies - log to see structure
-          console.log('First waypoint:', directions.waypoints[0]);
-
-          // Extract coordinates from waypoints
-          const coords: Array<[number, number]> = directions.waypoints.map((wp: any) => {
-            // Handle different possible formats
-            if (Array.isArray(wp)) {
-              return wp as [number, number];
-            } else if (wp.lat !== undefined && wp.lng !== undefined) {
-              return [wp.lng, wp.lat] as [number, number];
-            } else if (wp.latitude !== undefined && wp.longitude !== undefined) {
-              return [wp.longitude, wp.latitude] as [number, number];
-            }
-            return [wp[0], wp[1]] as [number, number];
-          });
-
-          console.log('Drawing route with', coords.length, 'points');
-          console.log('First coord:', coords[0]);
-          console.log('Last coord:', coords[coords.length - 1]);
-
-          // Use fire to draw lines since drawLines might not be a direct method
-          if (typeof fire === 'function') {
-            // Clear any existing route first
-            fire.call(map, 'clearLines', 'navigation-route');
-
-            // Draw the route
-            fire.call(
-              map,
-              'drawLines',
-              'navigation-route',
-              coords,
-              { color: '#0066CC', width: 6 },
-              3 // ordinal for the floor
-            );
-            console.log('Route drawn on map');
-          }
-
-          // Also show the destination POI
-          fire.call(map, 'showPOI', poiIdInt);
-          console.log('Destination POI highlighted');
-        }
-
-        navigationShownRef.current = true;
-      } catch (err) {
-        console.error('Error in navigation:', err);
-      }
-      */
     };
+    
+    // The map is already settled, so we can call showRoute directly.
+    // A small delay helps ensure the map can process the command.
+    setTimeout(showRoute, 200);
 
-    // Listen for moveEnd event to know when map is truly ready
-    let moveEndHandler: (() => void) | null = null;
-    let initialMoveComplete = false;
-
-    if (typeof on === 'function') {
-      moveEndHandler = () => {
-        if (!initialMoveComplete) {
-          initialMoveComplete = true;
-          console.log('Initial map move complete, sending navigation...');
-          // Give a small additional delay after moveEnd
-          setTimeout(showRoute, 200);
-        }
-      };
-
-      on.call(map, 'moveEnd', moveEndHandler);
-      console.log('Registered moveEnd listener for navigation timing');
-    }
-
-    // Fallback: If no moveEnd fires within 2 seconds, send anyway
-    const fallbackTimeout = setTimeout(() => {
-      if (!navigationShownRef.current) {
-        console.log('Fallback timeout - sending navigation now');
-        showRoute();
-      }
-    }, 2000);
-
-    return () => {
-      clearTimeout(fallbackTimeout);
-      // Note: SDK may not support removing listeners, but we prevent double-fire with ref
-    };
   }, [mapReady, showNavigation, selectedPOI]);
 
-  // Map container - always render so callback ref fires
-  // Overlay loading/error states on top
   return (
     <div className={`relative w-full h-full ${className}`}>
-      {/* Map container - always mounted */}
       <div
         ref={mapContainerRef}
         className="absolute inset-0 w-full h-full"
         aria-label="Interactive airport map"
       />
-
-      {/* Loading overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-90 z-10">
           <div className="text-center">
@@ -265,8 +174,6 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
           </div>
         </div>
       )}
-
-      {/* Error overlay */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-red-50 bg-opacity-95 z-10">
           <div className="text-center px-8">

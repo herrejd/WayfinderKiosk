@@ -4,11 +4,10 @@
  */
 
 import React, { useEffect, useCallback, useRef } from 'react';
-import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { useKioskStore } from '@/store/kioskStore';
 import { useGlobalErrorHandler } from '@/hooks/useGlobalErrorHandler';
 import { useInactivityTimer } from '@/hooks/useInactivityTimer';
-import { directoryService } from '@/services';
+import { directoryService, wayfinderService } from '@/services';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import IdleScreen from '@/components/IdleScreen';
 import GateFinder from '@/components/GateFinder';
@@ -17,10 +16,26 @@ import MapView from '@/components/MapView';
 import AccessibilityToolbar from '@/components/AccessibilityToolbar';
 
 /**
- * Main application layout with routing
+ * Renders the component for the current view
+ */
+const CurrentView: React.FC<{ view: string }> = ({ view }) => {
+  switch (view) {
+    case 'gate-finder':
+      return <GateFinder />;
+    case 'directory':
+      return <Directory />;
+    case 'idle':
+    default:
+      return <IdleScreen />;
+  }
+};
+
+/**
+ * Main application layout using state-based routing
  */
 const AppLayout: React.FC = () => {
-  const navigate = useNavigate();
+  const currentView = useKioskStore((state) => state.currentView);
+  const isMapVisible = useKioskStore((state) => state.isMapVisible);
   const isOffline = useKioskStore((state) => state.isOffline);
   const reset = useKioskStore((state) => state.reset);
   const userPreferences = useKioskStore((state) => state.userPreferences);
@@ -29,8 +44,8 @@ const AppLayout: React.FC = () => {
   const handleTimeout = useCallback(() => {
     console.log('Inactivity timeout - returning to idle screen');
     reset();
-    navigate('/');
-  }, [reset, navigate]);
+    wayfinderService.restoreInitialState();
+  }, [reset]);
 
   // Set up inactivity timer to return to idle screen
   useInactivityTimer({
@@ -41,17 +56,8 @@ const AppLayout: React.FC = () => {
 
   // Apply accessibility classes to body based on user preferences
   useEffect(() => {
-    if (userPreferences.accessibility.highContrast) {
-      document.body.classList.add('high-contrast');
-    } else {
-      document.body.classList.remove('high-contrast');
-    }
-
-    if (userPreferences.accessibility.largeText) {
-      document.body.classList.add('large-text');
-    } else {
-      document.body.classList.remove('large-text');
-    }
+    document.body.classList.toggle('high-contrast', userPreferences.accessibility.highContrast);
+    document.body.classList.toggle('large-text', userPreferences.accessibility.largeText);
   }, [userPreferences.accessibility.highContrast, userPreferences.accessibility.largeText]);
 
   return (
@@ -63,14 +69,19 @@ const AppLayout: React.FC = () => {
         </div>
       )}
 
-      {/* Main content */}
-      <Routes>
-        <Route path="/" element={<IdleScreen />} />
-        <Route path="/gate-finder" element={<GateFinder />} />
-        <Route path="/directory" element={<Directory />} />
-        <Route path="/map" element={<MapView />} />
-        <Route path="*" element={<IdleScreen />} />
-      </Routes>
+      {/* Main content views */}
+      <div className={isMapVisible ? 'hidden' : 'w-full h-full'}>
+        <CurrentView view={currentView} />
+      </div>
+
+      {/* Always-mounted Map View, visibility controlled by CSS */}
+      <div
+        className={`absolute top-0 left-0 w-full h-full transition-opacity duration-300 ${
+          isMapVisible ? 'opacity-100 z-20' : 'opacity-0 z-[-1]'
+        }`}
+      >
+        <MapView />
+      </div>
 
       {/* Accessibility Toolbar */}
       <AccessibilityToolbar />
@@ -80,7 +91,7 @@ const AppLayout: React.FC = () => {
 
 /**
  * Root App Component
- * Wraps the application with error boundary and routing
+ * Wraps the application with error boundary and context providers
  */
 export const App: React.FC = () => {
   const initRef = useRef(false);
@@ -129,11 +140,10 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <HashRouter>
-        <AppLayout />
-      </HashRouter>
+      <AppLayout />
     </ErrorBoundary>
   );
 };
+
 
 export default App;

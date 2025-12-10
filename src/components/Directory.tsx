@@ -6,10 +6,9 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useKioskStore } from '@/store/kioskStore';
-import { directoryService } from '@/services';
-import type { SDKPOI } from '@/types/wayfinder-sdk';
+import { directoryService, DirectoryPOI } from '@/services';
+import { parseFloorId } from '@/utils/floorParser';
 import type { POI } from '@/types/wayfinder';
 
 type TabType = 'shop' | 'dine' | 'relax';
@@ -22,7 +21,7 @@ const TAB_CATEGORY_MAP: Record<TabType, POI['category']> = {
 };
 
 interface POICardProps {
-  poi: SDKPOI;
+  poi: DirectoryPOI;
   onClick: () => void;
 }
 
@@ -100,18 +99,18 @@ function POICard({ poi, onClick }: POICardProps) {
  * Main view for browsing categorized POIs
  */
 export default function Directory() {
-  const navigate = useNavigate();
   const selectPOI = useKioskStore((state) => state.selectPOI);
   const setLoading = useKioskStore((state) => state.setLoading);
   const setErrorMessage = useKioskStore((state) => state.setErrorMessage);
   const updateInteraction = useKioskStore((state) => state.updateInteraction);
+  const setView = useKioskStore((state) => state.setView);
 
   const [activeTab, setActiveTab] = useState<TabType>('shop');
-  const [pois, setPois] = useState<SDKPOI[]>([]);
+  const [pois, setPois] = useState<DirectoryPOI[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingPOIs, setIsLoadingPOIs] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPOI, setSelectedPOI] = useState<SDKPOI | null>(null);
+  const [selectedPOI, setSelectedPOI] = useState<DirectoryPOI | null>(null);
 
   /**
    * Load POIs when active tab changes
@@ -126,7 +125,7 @@ export default function Directory() {
       updateInteraction();
 
       try {
-        let results: SDKPOI[] = [];
+        let results: DirectoryPOI[] = [];
 
         switch (activeTab) {
           case 'shop':
@@ -158,6 +157,7 @@ export default function Directory() {
 
   /**
    * Filter POIs based on search query
+   * Searches name, category, description, and keywords
    */
   const filteredPOIs = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -169,7 +169,12 @@ export default function Directory() {
       (poi) =>
         poi.name.toLowerCase().includes(query) ||
         poi.category?.toLowerCase().includes(query) ||
-        poi.description?.toLowerCase().includes(query)
+        poi.description?.toLowerCase().includes(query) ||
+        poi.keywords?.some(
+          (keyword) =>
+            keyword.isUserSearchable &&
+            keyword.name.toLowerCase().includes(query)
+        )
     );
   }, [pois, searchQuery]);
 
@@ -186,7 +191,7 @@ export default function Directory() {
   /**
    * Handle POI selection
    */
-  const handlePOIClick = (poi: SDKPOI) => {
+  const handlePOIClick = (poi: DirectoryPOI) => {
     setSelectedPOI(poi);
     updateInteraction();
   };
@@ -214,7 +219,7 @@ export default function Directory() {
       };
 
       selectPOI(storePOI);
-      navigate('/map');
+      // navigation to map is now handled by the selectPOI action
     }
   };
 
@@ -222,7 +227,7 @@ export default function Directory() {
    * Handle back button
    */
   const handleBack = () => {
-    navigate('/');
+    setView('idle');
     updateInteraction();
   };
 
@@ -511,7 +516,7 @@ export default function Directory() {
               <div className="mb-3">
                 <h3 className="font-semibold text-gray-900 mb-1">Location</h3>
                 <p className="text-gray-600">
-                  Floor: {selectedPOI.position.floorId}
+                  {parseFloorId(selectedPOI.position.floorId)}
                   {selectedPOI.nearbyLandmark && ` - Near ${selectedPOI.nearbyLandmark}`}
                 </p>
               </div>

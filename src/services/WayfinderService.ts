@@ -6,6 +6,7 @@
  * while the headless instance is used for data fetching operations.
  */
 
+import { useKioskStore } from '@/store/kioskStore';
 import type { LMInitSDK, WayfinderMap, WayfinderConfig } from '@/types/wayfinder-sdk';
 
 const SDK_URL = 'https://maps.locuslabs.com/sdk/LocusMapsSDK.js';
@@ -24,8 +25,7 @@ const KIOSK_CONFIG = {
 
 class WayfinderService {
   private LMInit: LMInitSDK | null = null;
-  private fullscreenInstance: WayfinderMap | null = null;
-  private headlessInstance: WayfinderMap | null = null;
+  private instance: WayfinderMap | null = null;
   private sdkLoadPromise: Promise<LMInitSDK> | null = null;
 
   /**
@@ -78,39 +78,13 @@ class WayfinderService {
   }
 
   /**
-   * Initialize headless instance for data fetching
-   * Does not require a DOM container
-   */
-  async initHeadless(): Promise<WayfinderMap> {
-    if (this.headlessInstance) {
-      return this.headlessInstance;
-    }
-
-    const LMInit = await this.loadSDK();
-
-    const config: WayfinderConfig = {
-      accountId: KIOSK_CONFIG.accountId,
-      venueId: KIOSK_CONFIG.venueId,
-      headless: true,
-    };
-
-    try {
-      this.headlessInstance = await LMInit.newMap(null, config);
-      return this.headlessInstance;
-    } catch (error) {
-      console.error('Error initializing headless Wayfinder instance:', error);
-      throw new Error('Failed to initialize headless map instance');
-    }
-  }
-
-  /**
-   * Initialize fullscreen instance for interactive map display
+   * Initialize the single, shared map instance
    * @param container - CSS selector for the container element
    */
-  async initFullscreen(container: string): Promise<WayfinderMap> {
+  async init(container: string): Promise<WayfinderMap> {
     // If instance exists, destroy it before creating a new one
-    if (this.fullscreenInstance) {
-      this.destroyFullscreen();
+    if (this.instance) {
+      this.destroy();
     }
 
     const LMInit = await this.loadSDK();
@@ -132,12 +106,12 @@ class WayfinderService {
     };
 
     try {
-      this.fullscreenInstance = await LMInit.newMap(container, config);
-      this.setupEventListeners(this.fullscreenInstance);
-      return this.fullscreenInstance;
+      this.instance = await LMInit.newMap(container, config);
+      this.setupEventListeners(this.instance);
+      return this.instance;
     } catch (error) {
-      console.error('Error initializing fullscreen Wayfinder instance:', error);
-      throw new Error('Failed to initialize fullscreen map instance');
+      console.error('Error initializing Wayfinder instance:', error);
+      throw new Error('Failed to initialize map instance');
     }
   }
 
@@ -171,57 +145,50 @@ class WayfinderService {
   }
 
   /**
-   * Get the headless map instance
+   * Get the single map instance
    * Returns null if not initialized
    */
-  getHeadless(): WayfinderMap | null {
-    return this.headlessInstance;
+  getInstance(): WayfinderMap | null {
+    return this.instance;
   }
 
   /**
-   * Get the fullscreen map instance
-   * Returns null if not initialized
+   * Destroy the map instance and clean up resources
    */
-  getFullscreen(): WayfinderMap | null {
-    return this.fullscreenInstance;
-  }
-
-  /**
-   * Destroy only the fullscreen map instance.
-   * This is called by the map component on unmount.
-   */
-  destroyFullscreen(): void {
-    if (this.fullscreenInstance) {
+  destroy(): void {
+    if (this.instance) {
       try {
         // Use the 'fire' method, as direct calls are not working
-        if (typeof (this.fullscreenInstance as any).fire === 'function') {
-          (this.fullscreenInstance as any).fire('destroy');
-          console.log('Fullscreen map instance destroyed via fire().');
+        if (typeof (this.instance as any).fire === 'function') {
+          (this.instance as any).fire('destroy');
+          console.log('Map instance destroyed via fire().');
         } else {
-          console.warn('destroyFullscreen: .fire() method not found on instance.');
+          console.warn('destroy: .fire() method not found on instance.');
         }
       } catch (error) {
-        console.error('Error destroying fullscreen instance:', error);
+        console.error('Error destroying instance:', error);
       }
-      this.fullscreenInstance = null;
+      this.instance = null;
     }
   }
 
   /**
-   * Destroy all map instances and clean up resources
-   * Should be called when the application unmounts
+   * Restore the map to its saved initial state
    */
-  destroy(): void {
-    this.destroyFullscreen();
-
-    if (this.headlessInstance) {
-      try {
-        this.headlessInstance.destroy();
-        console.log('Headless map instance destroyed.');
-      } catch (error) {
-        console.error('Error destroying headless instance:', error);
+  restoreInitialState(): void {
+    if (this.instance) {
+      const initialMapState = useKioskStore.getState().initialMapState;
+      if (initialMapState) {
+        // Reverting to fire() as the direct setState() call causes a DataCloneError
+        if (typeof (this.instance as any).fire === 'function') {
+          (this.instance as any).fire('setState', { state: initialMapState });
+          console.log('Map state restored to initial state via fire().');
+        } else {
+          console.warn('restoreInitialState: .fire() method not found on instance.');
+        }
+      } else {
+        console.warn('restoreInitialState: No initial map state saved.');
       }
-      this.headlessInstance = null;
     }
   }
 

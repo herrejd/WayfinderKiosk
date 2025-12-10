@@ -60,7 +60,7 @@ export const AccessibilityToolbar: React.FC = () => {
       {/* Floating toolbar panel */}
       {isOpen && (
         <div
-          className="fixed bottom-24 right-6 bg-white border-2 border-gray-800 rounded-lg shadow-lg p-4 z-40"
+          className="fixed bottom-36 left-6 bg-white border-2 border-gray-800 rounded-lg shadow-lg p-4 z-40"
           role="region"
           aria-label="Accessibility options"
         >
@@ -134,7 +134,7 @@ export const AccessibilityToolbar: React.FC = () => {
             ? 'Close accessibility options panel'
             : 'Open accessibility options panel'
         }
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-blue-600 text-white hover:bg-blue-700 shadow-lg flex items-center justify-center transition-colors z-40 font-bold text-2xl min-h-[48px] min-w-[48px]"
+        className="fixed bottom-20 left-6 w-16 h-16 rounded-full bg-blue-600 text-white hover:bg-blue-700 shadow-lg flex items-center justify-center transition-colors z-40 font-bold text-2xl min-h-[48px] min-w-[48px]"
         title="Accessibility Options"
       >
         ♿

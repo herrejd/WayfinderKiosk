@@ -15,9 +15,9 @@ class GateFinderService {
    * @returns Gate POI if found
    */
   async findGate(gateNumber: string): Promise<SDKPOI | null> {
-    const headless = wayfinderService.getHeadless();
-    if (!headless) {
-      throw new Error('Headless map instance not initialized');
+    const map = wayfinderService.getInstance();
+    if (!map) {
+      throw new Error('Map instance not initialized');
     }
 
     // Normalize gate number (remove spaces, hyphens, make uppercase)
@@ -34,7 +34,7 @@ class GateFinderService {
 
       // Try each query format
       for (const query of queries) {
-        const results = (await headless.search(query, true)) as SDKPOI[];
+        const results = (await map.search(query, true)) as SDKPOI[];
 
         // Look for gate POIs in results
         const gatePOI = results.find((poi) => {
@@ -72,9 +72,9 @@ class GateFinderService {
    * @returns Route directions with ETA and distance
    */
   async getRouteToGate(gateId: string, accessible: boolean = false): Promise<SDKDirections> {
-    const headless = wayfinderService.getHeadless();
-    if (!headless) {
-      throw new Error('Headless map instance not initialized');
+    const map = wayfinderService.getInstance();
+    if (!map) {
+      throw new Error('Map instance not initialized');
     }
 
     // Get kiosk location
@@ -88,7 +88,7 @@ class GateFinderService {
     const to: SDKLocation = { poiId: gateId };
 
     try {
-      const directions = await headless.getDirections(from, to, accessible);
+      const directions = await map.getDirections(from, to, accessible);
       return directions;
     } catch (error) {
       console.error(`Error getting route to gate ${gateId}:`, error);
@@ -102,9 +102,9 @@ class GateFinderService {
    * @param accessible - Whether to use accessible routes
    */
   async showNavigationToGate(gateId: string, accessible: boolean = false): Promise<void> {
-    const fullscreen = wayfinderService.getFullscreen();
-    if (!fullscreen) {
-      throw new Error('Fullscreen map instance not initialized');
+    const map = wayfinderService.getInstance();
+    if (!map) {
+      throw new Error('Map instance not initialized');
     }
 
     // Get kiosk location
@@ -118,7 +118,7 @@ class GateFinderService {
     const to: SDKLocation = { poiId: gateId };
 
     try {
-      await fullscreen.showNavigation(from, to, accessible);
+      await map.showNavigation(from, to, accessible);
     } catch (error) {
       console.error(`Error showing navigation to gate ${gateId}:`, error);
       throw new Error(`Failed to show navigation to gate: ${gateId}`);
@@ -191,13 +191,13 @@ class GateFinderService {
     // 3. Call findGate() with the gate number
 
     // For now, we'll just search for the flight number in POI data
-    const headless = wayfinderService.getHeadless();
-    if (!headless) {
-      throw new Error('Headless map instance not initialized');
+    const map = wayfinderService.getInstance();
+    if (!map) {
+      throw new Error('Map instance not initialized');
     }
 
     try {
-      const results = (await headless.search(flightNumber, true)) as SDKPOI[];
+      const results = (await map.search(flightNumber, true)) as SDKPOI[];
 
       // Find gate POIs
       const gatePOI = results.find((poi) => poi.category?.toLowerCase().includes('gate'));
@@ -214,14 +214,14 @@ class GateFinderService {
    * @returns Array of gate POIs
    */
   async getAllGates(): Promise<SDKPOI[]> {
-    const headless = wayfinderService.getHeadless();
-    if (!headless) {
-      throw new Error('Headless map instance not initialized');
+    const map = wayfinderService.getInstance();
+    if (!map) {
+      throw new Error('Map instance not initialized');
     }
 
     try {
       // Search for all gates
-      const results = (await headless.search('gate', true)) as SDKPOI[];
+      const results = (await map.search('gate', true)) as SDKPOI[];
 
       // Filter for gate POIs only
       const gates = results.filter((poi) => {

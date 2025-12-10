@@ -9,14 +9,12 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useKioskStore } from '@/store/kioskStore';
 import { barcodeScannerService, gateFinderService } from '@/services';
 import type { BoardingPassData, POI } from '@/types/wayfinder';
 import type { SDKPOI } from '@/types/wayfinder-sdk';
 
 export function GateFinder() {
-  const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Store state - use individual selectors to prevent re-render loops
@@ -24,6 +22,7 @@ export function GateFinder() {
   const setNavigating = useKioskStore((state) => state.setNavigating);
   const setErrorMessage = useKioskStore((state) => state.setErrorMessage);
   const updateInteraction = useKioskStore((state) => state.updateInteraction);
+  const setView = useKioskStore((state) => state.setView);
 
   // Component state
   const [isScanning, setIsScanning] = useState(false);
@@ -229,8 +228,7 @@ export function GateFinder() {
       const poiId = gatePOI.id || gatePOI.poiId || gatePOI.name;
       await gateFinderService.showNavigationToGate(poiId);
 
-      // Navigate to map view
-      navigate('/map');
+      // No longer need to navigate; the store handles showing the map
     } catch (err) {
       console.error('Error starting navigation:', err);
       setErrorMessage('Unable to start navigation. Please try again.');
@@ -261,7 +259,7 @@ export function GateFinder() {
           <button
             onClick={() => {
               updateInteraction();
-              navigate('/');
+              setView('idle');
             }}
             className="flex items-center gap-3 text-blue-600 hover:text-blue-700 transition-colors text-xl font-medium"
             aria-label="Back to home"

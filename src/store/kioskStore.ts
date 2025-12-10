@@ -14,6 +14,7 @@ export type ViewType = 'idle' | 'gate-finder' | 'directory' | 'map';
 export interface KioskState {
   // State properties
   currentView: ViewType;
+  isMapVisible: boolean; // New state to control map visibility
   selectedPOI: POI | null;
   lastInteraction: Date;
   language: 'en' | 'es' | 'fr';
@@ -22,9 +23,11 @@ export interface KioskState {
   userPreferences: UserPreferences;
   errorMessage: string | null;
   isLoading: boolean;
+  initialMapState: string | null; // New state for map's initial state
 
   // Actions
   setView: (view: ViewType) => void;
+  setMapVisible: (isVisible: boolean) => void; // New action
   selectPOI: (poi: POI | null) => void;
   updateInteraction: () => void;
   setLanguage: (language: 'en' | 'es' | 'fr') => void;
@@ -33,6 +36,7 @@ export interface KioskState {
   setErrorMessage: (message: string | null) => void;
   setLoading: (isLoading: boolean) => void;
   setUserPreferences: (preferences: Partial<UserPreferences>) => void;
+  setInitialMapState: (state: string) => void; // New action
   reset: () => void;
 }
 
@@ -63,8 +67,11 @@ const initialState: Omit<
   | 'setLoading'
   | 'setUserPreferences'
   | 'reset'
+  | 'setMapVisible'
+  | 'setInitialMapState' // Add new action to omit list
 > = {
   currentView: 'idle',
+  isMapVisible: false,
   selectedPOI: null,
   lastInteraction: new Date(),
   language: 'en',
@@ -73,6 +80,7 @@ const initialState: Omit<
   userPreferences: defaultUserPreferences,
   errorMessage: null,
   isLoading: false,
+  initialMapState: null, // Add to initial state
 };
 
 /**
@@ -89,22 +97,40 @@ export const useKioskStore = create<KioskState>()(
          * Set the current view/screen
          */
         setView: (view: ViewType) => {
-          set(
-            { currentView: view },
-            false,
-            { type: 'setView', payload: view }
-          );
+          set({ currentView: view }, false, { type: 'setView', payload: view });
         },
 
         /**
-         * Select a POI or clear selection
+         * Set the visibility of the map view
+         */
+        setMapVisible: (isVisible: boolean) => {
+          set({ isMapVisible: isVisible }, false, {
+            type: 'setMapVisible',
+            payload: isVisible,
+          });
+        },
+
+        /**
+         * Select a POI or clear selection.
+         * Selecting a POI automatically shows the map and sets the view.
          */
         selectPOI: (poi: POI | null) => {
-          set(
-            { selectedPOI: poi },
-            false,
-            { type: 'selectPOI', payload: poi }
-          );
+          if (poi) {
+            set(
+              {
+                selectedPOI: poi,
+                isMapVisible: true, // Show the map
+                currentView: 'map', // Switch to map view
+              },
+              false,
+              { type: 'selectPOI', payload: poi }
+            );
+          } else {
+            set({ selectedPOI: null }, false, {
+              type: 'selectPOI',
+              payload: null,
+            });
+          }
         },
 
         /**
@@ -112,11 +138,9 @@ export const useKioskStore = create<KioskState>()(
          * Used for inactivity detection
          */
         updateInteraction: () => {
-          set(
-            { lastInteraction: new Date() },
-            false,
-            { type: 'updateInteraction' }
-          );
+          set({ lastInteraction: new Date() }, false, {
+            type: 'updateInteraction',
+          });
         },
 
         /**
@@ -141,44 +165,40 @@ export const useKioskStore = create<KioskState>()(
          * When true, inactivity timer is paused
          */
         setNavigating: (isNavigating: boolean) => {
-          set(
-            { isNavigating },
-            false,
-            { type: 'setNavigating', payload: isNavigating }
-          );
+          set({ isNavigating }, false, {
+            type: 'setNavigating',
+            payload: isNavigating,
+          });
         },
 
         /**
          * Set offline status
          */
         setOffline: (isOffline: boolean) => {
-          set(
-            { isOffline },
-            false,
-            { type: 'setOffline', payload: isOffline }
-          );
+          set({ isOffline }, false, {
+            type: 'setOffline',
+            payload: isOffline,
+          });
         },
 
         /**
          * Set error message for display
          */
         setErrorMessage: (message: string | null) => {
-          set(
-            { errorMessage: message },
-            false,
-            { type: 'setErrorMessage', payload: message }
-          );
+          set({ errorMessage: message }, false, {
+            type: 'setErrorMessage',
+            payload: message,
+          });
         },
 
         /**
          * Set global loading state
          */
         setLoading: (isLoading: boolean) => {
-          set(
-            { isLoading },
-            false,
-            { type: 'setLoading', payload: isLoading }
-          );
+          set({ isLoading }, false, {
+            type: 'setLoading',
+            payload: isLoading,
+          });
         },
 
         /**
@@ -195,6 +215,16 @@ export const useKioskStore = create<KioskState>()(
             false,
             { type: 'setUserPreferences', payload: preferences }
           );
+        },
+
+        /**
+         * Set the initial map state identifier for later restoration
+         */
+        setInitialMapState: (state: string) => {
+          set({ initialMapState: state }, false, {
+            type: 'setInitialMapState',
+            payload: state,
+          });
         },
 
         /**

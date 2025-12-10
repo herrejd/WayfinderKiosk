@@ -12,6 +12,26 @@ export type SDKLocation =
   | { lat: number; lng: number; floorId: string };
 
 /**
+ * Security queue dynamic data
+ */
+export interface SDKSecurityDynamicData {
+  isTemporarilyClosed: boolean;
+  queueTime: number; // Wait time in minutes
+  timeIsReal: boolean; // Whether this is real-time data vs default
+  lastUpdated: number; // Timestamp
+}
+
+/**
+ * Queue configuration for security POIs
+ */
+export interface SDKQueueConfig {
+  defaultQueueTime: number;
+  primaryQueueId: string;
+  queueSubtype: string; // e.g., "clear", "tsa", "precheck"
+  queueType: string; // e.g., "SecurityLane"
+}
+
+/**
  * POI object schema from SDK
  * Based on getAllPOIs() response: { poiId: poiObject, ... }
  */
@@ -25,6 +45,8 @@ export interface SDKPOI {
     latitude: number;
     longitude: number;
     floorId: string;
+    floorName?: string;
+    floorOrdinal?: number;
     structureName?: string;
     buildingId?: string;
   };
@@ -44,6 +66,11 @@ export interface SDKPOI {
   phone?: string;
   nearbyLandmark?: string;
   zoomRadius?: string;
+  // Security queue data
+  queue?: SDKQueueConfig;
+  dynamicData?: {
+    security?: SDKSecurityDynamicData;
+  };
 }
 
 /**

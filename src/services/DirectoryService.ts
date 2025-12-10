@@ -5,8 +5,30 @@
  * Implements caching to reduce redundant API calls.
  */
 
-import type { SDKPOI } from '@/types/wayfinder-sdk';
+import type { SDKPOI, WayfinderMap } from '@/types/wayfinder-sdk';
 import { wayfinderService } from './WayfinderService';
+
+// Helper functions for distance calculation
+function deg2rad(deg: number) {
+  return deg * (Math.PI / 180);
+}
+
+function getDistanceM(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * 1000; // Distance in meters
+}
+
+// Augmented POI type with distance
+export type DirectoryPOI = SDKPOI & { distanceFromKiosk: number };
 
 // POI category prefixes based on venue configuration
 const CATEGORY_PREFIXES = {
@@ -16,7 +38,7 @@ const CATEGORY_PREFIXES = {
 } as const;
 
 class DirectoryService {
-  private poiCache = new Map<string, SDKPOI[]>();
+  private poiCache = new Map<string, DirectoryPOI[]>();
   private allPOIsCache: SDKPOI[] | null = null;
   private cacheTimestamp: number | null = null;
   private initPromise: Promise<void> | null = null;
@@ -35,7 +57,8 @@ class DirectoryService {
     this.initPromise = (async () => {
       try {
         console.log('DirectoryService: Initializing and fetching all POIs...');
-        await wayfinderService.initHeadless();
+        // The map instance is now initialized by the WayfinderMap component.
+        // We will wait for it to be ready before fetching POIs.
         this.allPOIsCache = await this.fetchAllPOIs();
         this.cacheTimestamp = Date.now();
         console.log(`DirectoryService: Cached ${this.allPOIsCache.length} POIs`);
@@ -59,22 +82,52 @@ class DirectoryService {
   /**
    * Get all shop POIs (retail, duty-free, etc.)
    */
-  async getShopPOIs(): Promise<SDKPOI[]> {
+  async getShopPOIs(): Promise<DirectoryPOI[]> {
     return this.getPOIsByCategory('shop', CATEGORY_PREFIXES.shop);
   }
 
   /**
    * Get all dining POIs (restaurants, cafes, etc.)
    */
-  async getDinePOIs(): Promise<SDKPOI[]> {
+  async getDinePOIs(): Promise<DirectoryPOI[]> {
     return this.getPOIsByCategory('dine', CATEGORY_PREFIXES.dine);
   }
 
   /**
    * Get all relaxation POIs (lounges, spas, etc.)
    */
-  async getRelaxPOIs(): Promise<SDKPOI[]> {
+  async getRelaxPOIs(): Promise<DirectoryPOI[]> {
     return this.getPOIsByCategory('relax', CATEGORY_PREFIXES.relax);
+  }
+
+  /**
+   * Search for POIs by text query
+   * @param query - Search term
+   * @returns Matching POIs
+   */
+  /**
+   * Waits for the single map instance to be available.
+   * @private
+   */
+  private async getMapInstance(): Promise<WayfinderMap> {
+    return new Promise((resolve, reject) => {
+      const interval = 100; // ms
+      const timeout = 30000; // 30 seconds
+      let elapsedTime = 0;
+
+      const checkInstance = () => {
+        const instance = wayfinderService.getInstance();
+        if (instance) {
+          resolve(instance);
+        } else if (elapsedTime >= timeout) {
+          reject(new Error('Failed to get map instance: Timeout'));
+        } else {
+          elapsedTime += interval;
+          setTimeout(checkInstance, interval);
+        }
+      };
+      checkInstance();
+    });
   }
 
   /**
@@ -87,13 +140,10 @@ class DirectoryService {
       return [];
     }
 
-    const headless = wayfinderService.getHeadless();
-    if (!headless) {
-      throw new Error('Headless map instance not initialized');
-    }
+    const map = await this.getMapInstance();
 
     try {
-      const results = await headless.search(query, true);
+      const results = await map.search(query, true);
       return results as SDKPOI[];
     } catch (error) {
       console.error('Error searching POIs:', error);
@@ -106,13 +156,10 @@ class DirectoryService {
    * @param poiId - POI identifier
    */
   async getPOIById(poiId: string): Promise<SDKPOI> {
-    const headless = wayfinderService.getHeadless();
-    if (!headless) {
-      throw new Error('Headless map instance not initialized');
-    }
+    const map = await this.getMapInstance();
 
     try {
-      return await headless.getPOIDetails(poiId);
+      return await map.getPOIDetails(poiId);
     } catch (error) {
       console.error(`Error fetching POI ${poiId}:`, error);
       throw new Error(`Failed to fetch POI details: ${poiId}`);
@@ -124,15 +171,12 @@ class DirectoryService {
    * Returns POIs as an array with ID included in each POI object
    */
   private async fetchAllPOIs(): Promise<SDKPOI[]> {
-    const headless = wayfinderService.getHeadless();
-    if (!headless) {
-      throw new Error('Headless map instance not initialized');
-    }
+    const map = await this.getMapInstance();
 
     // Try getAllPOIs first (returns object with POI IDs as keys)
-    if (typeof headless.getAllPOIs === 'function') {
+    if (typeof map.getAllPOIs === 'function') {
       console.log('DirectoryService: Using getAllPOIs method');
-      const poisObj = await headless.getAllPOIs();
+      const poisObj = await map.getAllPOIs();
 
       // Convert to array, adding the ID to each POI
       const poisArray: SDKPOI[] = [];
@@ -147,7 +191,7 @@ class DirectoryService {
 
     // Fallback: Use search with empty string
     console.log('DirectoryService: getAllPOIs not available, using search fallback');
-    const results = await headless.search('', true);
+    const results = await map.search('', true);
 
     if (Array.isArray(results)) {
       // Filter out string results and map POI objects
@@ -171,7 +215,7 @@ class DirectoryService {
   private async getPOIsByCategory(
     categoryKey: string,
     prefixes: readonly string[]
-  ): Promise<SDKPOI[]> {
+  ): Promise<DirectoryPOI[]> {
     // Check cache
     const cached = this.poiCache.get(categoryKey);
     if (cached && this.isCacheValid()) {
@@ -192,13 +236,35 @@ class DirectoryService {
         return prefixes.some((prefix) => category.startsWith(prefix.toLowerCase()));
       });
 
-      // Sort alphabetically by name
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
+      // Get kiosk location to calculate distances
+      const kioskLocation = wayfinderService.getKioskLocation();
 
-      // Cache the filtered results
-      this.poiCache.set(categoryKey, filtered);
+      // Augment POIs with distance from kiosk
+      const poisWithDistance = filtered.map((poi) => {
+        const distance = getDistanceM(
+          kioskLocation.lat,
+          kioskLocation.lng,
+          poi.position.latitude,
+          poi.position.longitude
+        );
+        return { ...poi, distanceFromKiosk: distance };
+      });
 
-      return filtered;
+      // Sort by floor and then by distance
+      poisWithDistance.sort((a, b) => {
+        const aOnSameFloor = a.position.floorId === kioskLocation.floorId;
+        const bOnSameFloor = b.position.floorId === kioskLocation.floorId;
+
+        if (aOnSameFloor && !bOnSameFloor) return -1;
+        if (!aOnSameFloor && bOnSameFloor) return 1;
+        
+        return a.distanceFromKiosk - b.distanceFromKiosk;
+      });
+
+      // Cache the sorted results
+      this.poiCache.set(categoryKey, poisWithDistance);
+
+      return poisWithDistance;
     } catch (error) {
       console.error(`Error fetching ${categoryKey} POIs:`, error);
       throw new Error(`Failed to fetch ${categoryKey} POIs`);
@@ -259,6 +325,50 @@ class DirectoryService {
     }
     return this.allPOIsCache;
   }
+
+  /**
+   * Get security checkpoint wait times
+   * Returns POIs with category "security" that have queue/wait time data
+   */
+  async getSecurityWaitTimes(): Promise<SecurityWaitTime[]> {
+    if (!this.allPOIsCache || !this.isCacheValid()) {
+      this.allPOIsCache = await this.fetchAllPOIs();
+      this.cacheTimestamp = Date.now();
+    }
+
+    // Filter for security POIs with dynamic data
+    const securityPOIs = this.allPOIsCache.filter(
+      (poi) => poi.category === 'security' && poi.dynamicData?.security
+    );
+
+    // Map to simplified wait time objects
+    return securityPOIs.map((poi) => ({
+      id: poi.id || poi.poiId || poi.name,
+      name: poi.name,
+      queueType: poi.queue?.queueSubtype || 'standard',
+      waitTimeMinutes: poi.dynamicData?.security?.queueTime ?? poi.queue?.defaultQueueTime ?? 0,
+      isTemporarilyClosed: poi.dynamicData?.security?.isTemporarilyClosed ?? false,
+      isRealTime: poi.dynamicData?.security?.timeIsReal ?? false,
+      lastUpdated: poi.dynamicData?.security?.lastUpdated
+        ? new Date(poi.dynamicData.security.lastUpdated)
+        : null,
+      location: poi.nearbyLandmark || poi.position.structureName || '',
+    }));
+  }
+}
+
+/**
+ * Simplified security wait time data for UI display
+ */
+export interface SecurityWaitTime {
+  id: string;
+  name: string;
+  queueType: string; // 'clear', 'tsa', 'precheck', 'standard'
+  waitTimeMinutes: number;
+  isTemporarilyClosed: boolean;
+  isRealTime: boolean;
+  lastUpdated: Date | null;
+  location: string;
 }
 
 // Export singleton instance
