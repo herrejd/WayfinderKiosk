@@ -6,8 +6,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { wayfinderService } from '@/services';
 import { useKioskStore } from '@/store/kioskStore';
-import { config } from '@/config';
-import { QRCodeModal } from './QRCodeModal';
 
 interface WayfinderMapProps {
   className?: string;
@@ -27,17 +25,16 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
   const [error, setError] = useState<Error | null>(null);
   const selectedPOI = useKioskStore((state) => state.selectedPOI);
   const setInitialMapState = useKioskStore((state) => state.setInitialMapState);
-  const qrCodeUrl = useKioskStore((state) => state.qrCodeUrl);
-  const setQrCodeUrl = useKioskStore((state) => state.setQrCodeUrl);
-  const setStoreMapReady = useKioskStore((state) => state.setMapReady);
+  const flightSearchQuery = useKioskStore((state) => state.flightSearchQuery);
+  const setFlightSearchQuery = useKioskStore((state) => state.setFlightSearchQuery);
+  const isMapReadyGlobal = useKioskStore((state) => state.isMapReady);
+  const setMapReadyGlobal = useKioskStore((state) => state.setMapReady);
   const initStartedRef = useRef(false);
   const navigationShownRef = useRef(false);
-  const mapContainerNodeRef = useRef<HTMLDivElement | null>(null);
 
   // Use callback ref to initialize map when container is ready
   const mapContainerRef = useCallback(
     (node: HTMLDivElement | null) => {
-      mapContainerNodeRef.current = node;
       if (!node || initStartedRef.current) return;
       initStartedRef.current = true;
 
@@ -52,7 +49,7 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
           console.log('Wayfinder map initialized successfully');
           setIsLoading(false);
           setMapReady(true);
-          setStoreMapReady(true);
+          setMapReadyGlobal(true);
           onMapReady?.();
         } catch (err) {
           const error = err instanceof Error ? err : new Error('Failed to initialize map');
@@ -67,45 +64,6 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
     },
     [onMapReady, onError]
   );
-
-  // Intercept external link clicks and show QR code instead
-  useEffect(() => {
-    const container = mapContainerNodeRef.current;
-    if (!container || !mapReady) return;
-
-    const handleLinkClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-
-      // Find the closest anchor element
-      const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
-      if (!anchor) return;
-
-      const href = anchor.getAttribute('href');
-      if (!href) return;
-
-      // Check if it's an external link (starts with http/https and has target="_blank")
-      const isExternal =
-        (href.startsWith('http://') || href.startsWith('https://')) &&
-        (anchor.getAttribute('target') === '_blank' || !href.includes(window.location.hostname));
-
-      if (isExternal) {
-        // Prevent the default link behavior
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Show QR code modal instead
-        setQrCodeUrl(href);
-        console.log('Intercepted external link:', href);
-      }
-    };
-
-    // Use capture phase to intercept before SDK handles it
-    container.addEventListener('click', handleLinkClick, true);
-
-    return () => {
-      container.removeEventListener('click', handleLinkClick, true);
-    };
-  }, [mapReady]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -161,6 +119,32 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
     return () => clearTimeout(fallback);
   }, [mapReady, setInitialMapState]);
 
+  // Ref to track pending search - prevents cleanup from cancelling
+  const pendingSearchRef = useRef<string | null>(null);
+
+  // Effect to handle flight number searches
+  // Use global isMapReady state which persists, combined with local mapReady
+  useEffect(() => {
+    const isReady = mapReady || isMapReadyGlobal;
+    console.log(`[FlightSearch Effect] mapReady=${mapReady}, isMapReadyGlobal=${isMapReadyGlobal}, flightSearchQuery="${flightSearchQuery}"`);
+
+    if (isReady && flightSearchQuery && flightSearchQuery !== pendingSearchRef.current) {
+      const query = flightSearchQuery;
+      pendingSearchRef.current = query;
+      console.log(`[FlightSearch Effect] Triggering search for: "${query}"`);
+
+      // Clear the query from store
+      setFlightSearchQuery(null);
+
+      // Delay to allow map visibility transition to complete
+      setTimeout(() => {
+        console.log(`[FlightSearch Effect] Calling wayfinderService.flightSearch("${query}")`);
+        wayfinderService.flightSearch(query);
+        pendingSearchRef.current = null;
+      }, 500);
+    }
+  }, [mapReady, isMapReadyGlobal, flightSearchQuery, setFlightSearchQuery]);
+
   // Effect to handle showing navigation when a POI is selected
   useEffect(() => {
     // Reset flag if POI is cleared
@@ -175,9 +159,6 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
 
     const map = wayfinderService.getInstance();
     if (!map) return;
-
-    const on = (map as any).on;
-    if (typeof on !== 'function') return;
 
     const showRoute = () => {
       if (navigationShownRef.current || !selectedPOI) return;
@@ -200,8 +181,7 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
       }
     };
     
-    // The map is already settled, so we can call showRoute directly.
-    // A small delay helps ensure the map can process the command.
+    // A small delay helps ensure the map is ready to receive commands after being displayed
     setTimeout(showRoute, 200);
 
   }, [mapReady, showNavigation, selectedPOI]);
@@ -242,19 +222,6 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
             <p className="text-lg text-red-500 mt-2">Please try again or contact assistance</p>
           </div>
         </div>
-      )}
-
-      {/* QR Code Modal for external links and "Take Map With You" */}
-      {qrCodeUrl && (
-        <QRCodeModal
-          url={qrCodeUrl}
-          onClose={() => setQrCodeUrl(null)}
-          title={
-            qrCodeUrl.startsWith(config.mapQrBaseUrl)
-              ? 'Take This Map With You'
-              : 'Scan to Visit Website'
-          }
-        />
       )}
     </div>
   );

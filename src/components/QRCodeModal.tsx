@@ -3,7 +3,7 @@
  * Displays a QR code for a URL so kiosk users can scan with their phone
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -21,15 +21,15 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({
   const { t } = useTranslation();
   const displayTitle = title || t('qrCode.scanToVisit');
 
-  // Extract domain for display
-  const displayUrl = (() => {
+  // Extract domain for display (memoized to avoid parsing on every render)
+  const displayUrl = useMemo(() => {
     try {
       const urlObj = new URL(url);
       return urlObj.hostname.replace('www.', '');
     } catch {
       return url;
     }
-  })();
+  }, [url]);
 
   return (
     <div

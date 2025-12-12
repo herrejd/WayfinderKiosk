@@ -9,22 +9,20 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { barcodeScannerService, gateFinderService } from '@/services';
 import type { BoardingPassData, POI } from '@/types/wayfinder';
 import type { SDKPOI } from '@/types/wayfinder-sdk';
 
 export function GateFinder() {
-  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Store state - use individual selectors to prevent re-render loops
+  // Store state
   const selectPOI = useKioskStore((state) => state.selectPOI);
   const setNavigating = useKioskStore((state) => state.setNavigating);
   const setErrorMessage = useKioskStore((state) => state.setErrorMessage);
   const updateInteraction = useKioskStore((state) => state.updateInteraction);
-  const setView = useKioskStore((state) => state.setView);
+  const reset = useKioskStore((state) => state.reset);
 
   // Component state
   const [isScanning, setIsScanning] = useState(false);
@@ -52,11 +50,9 @@ export function GateFinder() {
     setBoardingPass(data);
     setError(null);
 
-    // If gate is in boarding pass, search for it
     if (data.gate) {
       await searchForGate(data.gate);
     } else if (data.flightNumber) {
-      // Try to find gate by flight number
       setIsSearching(true);
       try {
         const gate = await gateFinderService.findGateByFlightNumber(data.flightNumber);
@@ -186,14 +182,12 @@ export function GateFinder() {
     setGatePOI(gate);
 
     try {
-      // Get route to calculate walking time
       const gateId = gate.id || gate.poiId || gate.name;
       const route = await gateFinderService.getRouteToGate(gateId);
       const timeSeconds = route.eta || 0;
       setWalkingTime(gateFinderService.formatWalkingTime(timeSeconds));
     } catch (err) {
       console.error('Error calculating route:', err);
-      // Still show gate info even if route calculation fails
       setWalkingTime(null);
     }
   };
@@ -208,11 +202,10 @@ export function GateFinder() {
     }
 
     try {
-      // Convert SDKPOI to POI for store
       const poi: POI = {
         id: gatePOI.id || gatePOI.poiId || gatePOI.name,
         name: gatePOI.name,
-        category: 'relax', // Gates are general category
+        category: 'relax', 
         description: gatePOI.description || '',
         position: {
           lat: gatePOI.position.latitude,
@@ -222,15 +215,11 @@ export function GateFinder() {
         floor: gatePOI.position.floorId,
       };
 
-      // Update store
       selectPOI(poi);
       setNavigating(true);
 
-      // Show navigation on map
       const poiId = gatePOI.id || gatePOI.poiId || gatePOI.name;
       await gateFinderService.showNavigationToGate(poiId);
-
-      // No longer need to navigate; the store handles showing the map
     } catch (err) {
       console.error('Error starting navigation:', err);
       setErrorMessage('Unable to start navigation. Please try again.');
@@ -261,7 +250,7 @@ export function GateFinder() {
           <button
             onClick={() => {
               updateInteraction();
-              setView('idle');
+              reset();
             }}
             className="flex items-center gap-3 text-blue-600 hover:text-blue-700 transition-colors text-xl font-medium"
             aria-label="Back to home"
@@ -280,9 +269,9 @@ export function GateFinder() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            <span>{t('common.back')}</span>
+            <span>Back</span>
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">{t('gateFinder.title')}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Find Your Gate</h1>
           <div className="w-24" aria-hidden="true" />
         </div>
       </header>
@@ -302,7 +291,7 @@ export function GateFinder() {
                 onClick={resetSearch}
                 className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-lg font-medium"
               >
-                {t('common.retry')}
+                Try Again
               </button>
             </div>
           )}
@@ -331,14 +320,14 @@ export function GateFinder() {
 
               <div className="text-center space-y-4">
                 <div>
-                  <p className="text-2xl text-gray-600 mb-2">{t('gateFinder.gateResult')}</p>
+                  <p className="text-2xl text-gray-600 mb-2">Your Gate</p>
                   <p className="text-6xl font-bold text-blue-600">{gatePOI.name}</p>
                 </div>
 
                 {walkingTime && (
                   <div className="bg-blue-50 rounded-lg p-4">
                     <p className="text-xl text-gray-700">
-                      <span className="font-semibold">{t('gateFinder.walkingTime')}:</span> {walkingTime}
+                      <span className="font-semibold">Walking Time:</span> {walkingTime}
                     </p>
                   </div>
                 )}
@@ -349,7 +338,7 @@ export function GateFinder() {
                 className="w-full min-h-[80px] bg-blue-600 text-white text-2xl font-bold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-lg"
                 aria-label={`Navigate to ${gatePOI.name}`}
               >
-                {t('gateFinder.navigate')}
+                Navigate to Gate
               </button>
 
               <button
@@ -367,10 +356,10 @@ export function GateFinder() {
             <div className="bg-white rounded-xl shadow-lg p-8 space-y-6">
               <div className="text-center border-b pb-4">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {t('gateFinder.scanPrompt')}
+                  Scan Boarding Pass
                 </h2>
                 <p className="text-lg text-gray-600">
-                  {t('gateFinder.manualEntry')}
+                  Hold your boarding pass barcode up to the camera
                 </p>
               </div>
 
@@ -434,7 +423,7 @@ export function GateFinder() {
                     setFlightNumber(e.target.value.toUpperCase());
                     setError(null);
                   }}
-                  placeholder={t('gateFinder.flightPlaceholder')}
+                  placeholder="Enter flight number"
                   disabled={isSearching || isScanning}
                   className="w-full text-2xl p-4 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                   aria-label="Flight number input"
@@ -447,7 +436,7 @@ export function GateFinder() {
                   className="w-full min-h-[70px] bg-blue-600 text-white text-2xl font-bold rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-lg"
                   aria-label="Search for gate by flight number"
                 >
-                  {isSearching ? t('common.loading') : t('gateFinder.searchButton')}
+                  {isSearching ? 'Searching...' : 'Search Gate'}
                 </button>
               </div>
             </div>

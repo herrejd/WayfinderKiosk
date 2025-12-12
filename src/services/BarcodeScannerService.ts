@@ -15,6 +15,19 @@ import type { IScannerControls } from '@zxing/browser';
 import type { BoardingPassData } from '@/types/wayfinder';
 
 /**
+ * Static barcode reader hints (module-level constant)
+ * Configured for boarding pass formats: PDF417, QR Code, Aztec
+ */
+const BARCODE_HINTS = new Map<DecodeHintType, unknown>([
+  [DecodeHintType.POSSIBLE_FORMATS, [
+    BarcodeFormat.PDF_417, // Boarding passes
+    BarcodeFormat.QR_CODE, // Some airlines use QR codes
+    BarcodeFormat.AZTEC,   // Alternative format
+  ]],
+  [DecodeHintType.TRY_HARDER, true],
+]);
+
+/**
  * IATA BCBP (Bar Coded Boarding Pass) format parser
  *
  * Format specification:
@@ -162,16 +175,8 @@ class BarcodeScannerService {
   private isScanning = false;
 
   constructor() {
-    // Initialize reader with hint for PDF417 format
-    const hints = new Map();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.PDF_417, // Boarding passes
-      BarcodeFormat.QR_CODE, // Some airlines use QR codes
-      BarcodeFormat.AZTEC, // Alternative format
-    ]);
-    hints.set(DecodeHintType.TRY_HARDER, true);
-
-    this.reader = new BrowserMultiFormatReader(hints);
+    // Initialize reader with static hints for boarding pass formats
+    this.reader = new BrowserMultiFormatReader(BARCODE_HINTS);
   }
 
   /**

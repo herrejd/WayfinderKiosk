@@ -24,7 +24,7 @@ class GateFinderService {
     const normalizedGate = gateNumber.replace(/[\s-]/g, '').toUpperCase();
 
     try {
-      // Search for gate using various query formats
+      // Search for gate using various query formats (run in parallel)
       const queries = [
         `Gate ${gateNumber}`,
         `Gate ${normalizedGate}`,
@@ -32,33 +32,39 @@ class GateFinderService {
         normalizedGate,
       ];
 
-      // Try each query format
-      for (const query of queries) {
-        const results = (await map.search(query, true)) as SDKPOI[];
-
-        // Look for gate POIs in results
-        const gatePOI = results.find((poi) => {
+      // Helper to find gate POI from search results
+      const findGatePOI = (results: SDKPOI[]): SDKPOI | undefined => {
+        return results.find((poi) => {
           // Check if category indicates it's a gate
           if (poi.category?.toLowerCase().includes('gate')) {
             return true;
           }
-
           // Check if name contains the gate number
           const poiName = poi.name.replace(/[\s-]/g, '').toUpperCase();
           if (poiName.includes(normalizedGate) || poiName.includes(`GATE${normalizedGate}`)) {
             return true;
           }
-
           return false;
         });
+      };
 
+      // Run all queries in parallel and return first successful result
+      const searchPromises = queries.map(async (query) => {
+        const results = (await map.search(query, true)) as SDKPOI[];
+        const gatePOI = findGatePOI(results);
         if (gatePOI) {
           return gatePOI;
         }
-      }
+        throw new Error('No gate found for query');
+      });
 
-      // No gate found
-      return null;
+      try {
+        // Promise.any returns first fulfilled promise
+        return await Promise.any(searchPromises);
+      } catch {
+        // All promises rejected = no gate found
+        return null;
+      }
     } catch (error) {
       console.error(`Error finding gate ${gateNumber}:`, error);
       throw new Error(`Failed to find gate: ${gateNumber}`);

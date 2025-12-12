@@ -17,6 +17,8 @@ import Directory from '@/components/Directory';
 import MapView from '@/components/MapView';
 import AccessibilityToolbar from '@/components/AccessibilityToolbar';
 import TakeMapButton from '@/components/TakeMapButton';
+import VirtualKeyboard from '@/components/VirtualKeyboard';
+import { KeyboardProvider } from '@/context/KeyboardContext';
 
 /**
  * Renders the component for the current view
@@ -108,6 +110,9 @@ const AppLayout: React.FC = () => {
 
       {/* Accessibility Toolbar */}
       <AccessibilityToolbar />
+
+      {/* Virtual Keyboard */}
+      <VirtualKeyboard />
     </div>
   );
 };
@@ -163,7 +168,9 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <AppLayout />
+      <KeyboardProvider>
+        <AppLayout />
+      </KeyboardProvider>
     </ErrorBoundary>
   );
 };

@@ -44,7 +44,7 @@
     "all": "Tout",
     "searchPlaceholder": "Rechercher des lieux...",
     "getDirections": "Obtenir des Directions",
-    "walkTime": "{{minutes}} min à pied"
+    "walkTime": "à {{minutes}} min"
   },
   "map": {
     "title": "Plan de l'Aéroport",
@@ -67,5 +67,16 @@
     "mapLoadFailed": "Erreur de Carte",
     "tryAgain": "Veuillez réessayer ou demander de l'aide",
     "offline": "Pas de connexion internet"
+  },
+  "keyboard": {
+    "title": "Clavier Virtuel",
+    "placeholder": "Tapez ici...",
+    "clear": "Effacer",
+    "space": "Espace",
+    "done": "Terminé",
+    "shift": "Majuscule",
+    "backspace": "Retour",
+    "numbers": "Chiffres",
+    "letters": "Lettres"
   }
 }

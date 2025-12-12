@@ -5,14 +5,48 @@
  * Allows users to browse and select POIs for navigation.
  */
 
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { List } from 'react-window';
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { useKioskStore } from '@/store/kioskStore';
 import { directoryService, DirectoryPOI } from '@/services';
 import { parseFloorId } from '@/utils/floorParser';
+import { useKeyboard } from '@/context/KeyboardContext';
 import type { POI } from '@/types/wayfinder';
 
 type TabType = 'shop' | 'dine' | 'relax';
+
+// Virtualization constants
+const ROW_HEIGHT = 364; // Card height (340px) + gap (24px)
+
+/**
+ * Calculate column count based on container width
+ * Matches Tailwind breakpoints: 1 col (default), 2 col (md: 768px), 3 col (lg: 1024px)
+ */
+function getColumnCount(width: number): number {
+  if (width >= 1024) return 3;
+  if (width >= 768) return 2;
+  return 1;
+}
+
+/**
+ * Custom props passed to each virtual row via rowProps
+ */
+interface VirtualRowCustomProps {
+  items: DirectoryPOI[];
+  columnCount: number;
+  onSelect: (poi: DirectoryPOI) => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+/**
+ * Full props for virtual row (custom props + react-window injected props)
+ */
+interface VirtualRowProps extends VirtualRowCustomProps {
+  index: number;
+  style: React.CSSProperties;
+}
 
 // Map UI tab names to POI category names
 const TAB_CATEGORY_MAP: Record<TabType, POI['category']> = {
@@ -75,6 +109,7 @@ const POICard = memo(function POICard({ poi, onSelect, walkingTimeText }: POICar
           <img
             src={imageUrl}
             alt={poi.name}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />
         ) : (
@@ -124,13 +159,52 @@ const POICard = memo(function POICard({ poi, onSelect, walkingTimeText }: POICar
 });
 
 /**
+ * Virtual Row Component
+ * Renders a row of POI cards for virtualized list
+ * Each row contains 1-3 cards depending on screen width
+ */
+const VirtualRow = memo(function VirtualRow({
+  index,
+  style,
+  items,
+  columnCount,
+  onSelect,
+  t,
+}: VirtualRowProps) {
+  const startIndex = index * columnCount;
+  const rowItems = items.slice(startIndex, startIndex + columnCount);
+
+  return (
+    <div style={style} className="flex gap-6 px-0.5">
+      {rowItems.map((poi: DirectoryPOI) => {
+        const walkingMinutes = poi.distanceFromKiosk
+          ? getWalkingTimeMinutes(poi.distanceFromKiosk)
+          : null;
+        const walkingTimeText = walkingMinutes
+          ? t('directory.walkTime', { minutes: walkingMinutes })
+          : null;
+        return (
+          <div key={poi.poiId} className="flex-1 min-w-0">
+            <POICard poi={poi} onSelect={onSelect} walkingTimeText={walkingTimeText} />
+          </div>
+        );
+      })}
+      {/* Fill empty slots to maintain grid alignment */}
+      {rowItems.length < columnCount &&
+        Array.from({ length: columnCount - rowItems.length }).map((_, i) => (
+          <div key={`empty-${i}`} className="flex-1 min-w-0" />
+        ))}
+    </div>
+  );
+});
+
+/**
  * Directory Component
  * Main view for browsing categorized POIs
  */
 export default function Directory() {
   const { t } = useTranslation();
   const selectPOI = useKioskStore((state) => state.selectPOI);
-  const setLoading = useKioskStore((state) => state.setLoading);
   const setErrorMessage = useKioskStore((state) => state.setErrorMessage);
   const updateInteraction = useKioskStore((state) => state.updateInteraction);
   const setView = useKioskStore((state) => state.setView);
@@ -142,6 +216,10 @@ export default function Directory() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPOI, setSelectedPOI] = useState<DirectoryPOI | null>(null);
 
+  // Virtual keyboard integration
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { showKeyboard } = useKeyboard();
+
   /**
    * Load POIs when active tab changes
    * DirectoryService is initialized at app startup with cached data
@@ -151,7 +229,6 @@ export default function Directory() {
     async function loadPOIs() {
       setIsLoadingPOIs(true);
       setError(null);
-      setLoading(true);
       updateInteraction();
 
       try {
@@ -178,12 +255,11 @@ export default function Directory() {
         console.error('Error loading POIs:', err);
       } finally {
         setIsLoadingPOIs(false);
-        setLoading(false);
       }
     }
 
     loadPOIs();
-  }, [activeTab, updateInteraction, setLoading, setErrorMessage]);
+  }, [activeTab, updateInteraction, setErrorMessage]);
 
   /**
    * Filter POIs based on search query
@@ -343,14 +419,21 @@ export default function Directory() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="relative">
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 updateInteraction();
               }}
+              onFocus={() => {
+                if (searchInputRef.current) {
+                  showKeyboard(searchInputRef.current, searchQuery);
+                }
+              }}
               placeholder={t('directory.searchPlaceholder')}
               className="w-full h-14 pl-12 pr-12 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              readOnly
             />
             <svg
               className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400"
@@ -385,7 +468,7 @@ export default function Directory() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 overflow-y-auto">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-6 flex flex-col min-h-0 overflow-hidden">
         {/* Loading State */}
         {isLoadingPOIs && !error && (
           <div className="flex flex-col items-center justify-center py-20">
@@ -454,33 +537,40 @@ export default function Directory() {
           </div>
         )}
 
-        {/* POI Grid */}
+        {/* Results Count (above grid) */}
         {!isLoadingPOIs && !error && filteredPOIs.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPOIs.map((poi) => {
-              const walkingMinutes = poi.distanceFromKiosk
-                ? getWalkingTimeMinutes(poi.distanceFromKiosk)
-                : null;
-              const walkingTimeText = walkingMinutes
-                ? t('directory.walkTime', { minutes: walkingMinutes })
-                : null;
-              return (
-                <POICard
-                  key={poi.poiId}
-                  poi={poi}
-                  onSelect={handlePOIClick}
-                  walkingTimeText={walkingTimeText}
-                />
-              );
-            })}
+          <div className="mb-4 text-center text-gray-600">
+            Showing {filteredPOIs.length} {filteredPOIs.length === 1 ? 'location' : 'locations'}
+            {searchQuery && ` matching "${searchQuery}"`}
           </div>
         )}
 
-        {/* Results Count */}
+        {/* POI Grid - Virtualized */}
         {!isLoadingPOIs && !error && filteredPOIs.length > 0 && (
-          <div className="mt-6 text-center text-gray-600">
-            Showing {filteredPOIs.length} {filteredPOIs.length === 1 ? 'location' : 'locations'}
-            {searchQuery && ` matching "${searchQuery}"`}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <AutoSizer>
+              {({ height, width }) => {
+                const columnCount = getColumnCount(width);
+                const rowCount = Math.ceil(filteredPOIs.length / columnCount);
+                return (
+                  <div style={{ height, width }}>
+                    <List<VirtualRowCustomProps>
+                      rowCount={rowCount}
+                      rowHeight={ROW_HEIGHT}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      rowComponent={VirtualRow as any}
+                      rowProps={{
+                        items: filteredPOIs,
+                        columnCount,
+                        onSelect: handlePOIClick,
+                        t,
+                      }}
+                      style={{ height, width }}
+                    />
+                  </div>
+                );
+              }}
+            </AutoSizer>
           </div>
         )}
       </main>

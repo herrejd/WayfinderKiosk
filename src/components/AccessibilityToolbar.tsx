@@ -19,41 +19,28 @@ export const AccessibilityToolbar: React.FC = () => {
   const setUserPreferences = useKioskStore((state) => state.setUserPreferences);
 
   const handleHighContrastToggle = () => {
-    const newValue = !userPreferences.accessibility.highContrast;
     setUserPreferences({
       accessibility: {
         ...userPreferences.accessibility,
-        highContrast: newValue,
+        highContrast: !userPreferences.accessibility.highContrast,
       },
     });
-    // Apply class to body
-    if (newValue) {
-      document.body.classList.add('high-contrast');
-    } else {
-      document.body.classList.remove('high-contrast');
-    }
+    // Body class is applied by App.tsx useEffect (single source of truth)
   };
 
   const handleLargeTextToggle = () => {
-    const newValue = !userPreferences.accessibility.largeText;
     setUserPreferences({
       accessibility: {
         ...userPreferences.accessibility,
-        largeText: newValue,
+        largeText: !userPreferences.accessibility.largeText,
       },
     });
-    // Apply class to body
-    if (newValue) {
-      document.body.classList.add('large-text');
-    } else {
-      document.body.classList.remove('large-text');
-    }
+    // Body class is applied by App.tsx useEffect (single source of truth)
   };
 
   const handleAudioToggle = () => {
-    const newValue = !userPreferences.audioEnabled;
     setUserPreferences({
-      audioEnabled: newValue,
+      audioEnabled: !userPreferences.audioEnabled,
     });
   };
 

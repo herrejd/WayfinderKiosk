@@ -13,55 +13,53 @@ import { parseFloorId } from '@/utils/floorParser';
 export const MapView: React.FC = () => {
   const { t } = useTranslation();
   const selectedPOI = useKioskStore((state) => state.selectedPOI);
-  const selectPOI = useKioskStore((state) => state.selectPOI);
-  const setNavigating = useKioskStore((state) => state.setNavigating);
   const setView = useKioskStore((state) => state.setView);
   const setMapVisible = useKioskStore((state) => state.setMapVisible);
+  const selectPOI = useKioskStore((state) => state.selectPOI);
   const setQrCodeUrl = useKioskStore((state) => state.setQrCodeUrl);
+  const setFlightSearchQuery = useKioskStore((state) => state.setFlightSearchQuery);
 
   const handleBack = () => {
     // Close any open QR code modal
     setQrCodeUrl(null);
 
-    // Call resetMap() directly on the map instance
+    // Clear any flight search query
+    setFlightSearchQuery(null);
+
+    // Clear selected POI
+    selectPOI(null);
+
+    // Reset the map using the SDK's built-in reset function
     const map = wayfinderService.getInstance();
     if (map) {
       map.resetMap();
     }
 
-    // Delay the state update to allow the map to process the reset command
-    setTimeout(() => {
-      setNavigating(false);
-      selectPOI(null);
-      setMapVisible(false);
-      setView('idle');
-    }, 100);
+    // Hide the map and navigate back to idle screen
+    setMapVisible(false);
+    setView('idle');
   };
 
   const handleClearRoute = () => {
     // Close any open QR code modal
     setQrCodeUrl(null);
 
-    // Call resetMap() directly on the map instance
+    // Clear selected POI
+    selectPOI(null);
+
+    // Reset the map using the SDK's built-in reset function
     const map = wayfinderService.getInstance();
     if (map) {
       map.resetMap();
     }
 
-    // Delay the state update to allow the map to process the reset command
-    setTimeout(() => {
-      selectPOI(null);
-      setNavigating(false);
-      setMapVisible(false);
-      setView('directory');
-    }, 100);
+    // Hide the map and navigate back to directory
+    setMapVisible(false);
+    setView('directory');
   };
 
   const handleMapReady = () => {
-    // Map is ready, set navigating state if we have a POI
-    if (selectedPOI) {
-      setNavigating(true);
-    }
+    // Map is ready - navigation will be handled by WayfinderMap
   };
 
   const handleMapError = (error: Error) => {

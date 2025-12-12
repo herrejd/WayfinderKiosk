@@ -10,3 +10,4 @@ export { WayfinderMap } from './WayfinderMap';
 export { MapView } from './MapView';
 export { QRCodeModal } from './QRCodeModal';
 export { default as ErrorBoundary } from './ErrorBoundary';
+export { VirtualKeyboard } from './VirtualKeyboard';

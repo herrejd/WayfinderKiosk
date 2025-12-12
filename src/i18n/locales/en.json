@@ -44,7 +44,7 @@
     "all": "All",
     "searchPlaceholder": "Search locations...",
     "getDirections": "Get Directions",
-    "walkTime": "{{minutes}} min walk"
+    "walkTime": "{{minutes}} min away"
   },
   "map": {
     "title": "Airport Map",
@@ -67,5 +67,16 @@
     "mapLoadFailed": "Map Error",
     "tryAgain": "Please try again or contact assistance",
     "offline": "No internet connection"
+  },
+  "keyboard": {
+    "title": "Virtual Keyboard",
+    "placeholder": "Type here...",
+    "clear": "Clear",
+    "space": "Space",
+    "done": "Done",
+    "shift": "Shift",
+    "backspace": "Backspace",
+    "numbers": "Numbers",
+    "letters": "Letters"
   }
 }

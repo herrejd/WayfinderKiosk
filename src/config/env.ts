@@ -29,6 +29,18 @@ export const config = {
   flightStatusEnabled: import.meta.env.VITE_FLIGHT_STATUS_ENABLED === 'true',
   flightStatusApiKey: import.meta.env.VITE_FLIGHT_STATUS_API_KEY || '',
 
+  // Flight Search UI - when true, opens gate.departures search panel before searching
+  // Set VITE_FLIGHT_SEARCH_SHOW_UI=false to disable
+  flightSearchShowUI: (() => {
+    const val = import.meta.env.VITE_FLIGHT_SEARCH_SHOW_UI;
+    // Explicitly check for 'false' string (env vars are always strings)
+    if (val === 'false' || val === '0' || val === 'no') {
+      return false;
+    }
+    // Default to true if not set or set to anything else
+    return true;
+  })(),
+
   // POI Categories for map quick actions (all languages in one object)
   // Structure: { poiCategories: [...], "poiCategories-es": [...], "poiCategories-fr": [...] }
   poiCategoriesConfig: (() => {

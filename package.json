@@ -30,6 +30,8 @@
     "react-dom": "^19.2.1",
     "react-i18next": "^16.4.0",
     "react-router-dom": "^7.10.1",
+    "react-virtualized-auto-sizer": "^1.0.26",
+    "react-window": "^2.2.3",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
@@ -37,6 +39,7 @@
     "@tailwindcss/vite": "^4.1.17",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.22",
     "concurrently": "^9.2.1",
