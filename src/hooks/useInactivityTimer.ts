@@ -84,7 +84,10 @@ export const useInactivityTimer = (options: UseInactivityTimerOptions = {}) => {
     }
 
     // Add event listeners
-    const events = ['touchstart', 'click', 'keydown', 'mousemove'];
+    // Note: mousemove intentionally excluded - it fires too frequently and
+    // isn't meaningful interaction on a kiosk. touchstart/click/keydown cover
+    // all intentional user interactions.
+    const events = ['touchstart', 'click', 'keydown'];
     events.forEach((event) => {
       window.addEventListener(event, handleInteraction, { passive: true });
     });

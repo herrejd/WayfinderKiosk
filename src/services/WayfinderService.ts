@@ -17,6 +17,13 @@ class WayfinderService {
   private instance: WayfinderMap | null = null;
   private sdkLoadPromise: Promise<LMInitSDK> | null = null;
 
+  // Deferred promise for waitForInstance() - allows callers to await map initialization
+  private instanceDeferred: {
+    promise: Promise<WayfinderMap>;
+    resolve: (map: WayfinderMap) => void;
+    reject: (error: Error) => void;
+  } | null = null;
+
   /**
    * Dynamically load the SDK script
    * Returns cached promise if already loading/loaded
@@ -129,9 +136,24 @@ class WayfinderService {
     try {
       this.instance = await LMInit.newMap(container, sdkConfig);
       this.setupEventListeners(this.instance);
+
+      // Resolve any pending waitForInstance() calls
+      if (this.instanceDeferred) {
+        this.instanceDeferred.resolve(this.instance);
+      }
+
       return this.instance;
     } catch (error) {
       console.error('Error initializing Wayfinder instance:', error);
+
+      // Reject any pending waitForInstance() calls and reset for potential retry
+      if (this.instanceDeferred) {
+        this.instanceDeferred.reject(
+          error instanceof Error ? error : new Error('Failed to initialize map instance')
+        );
+        this.instanceDeferred = null;
+      }
+
       throw new Error('Failed to initialize map instance');
     }
   }
@@ -174,6 +196,35 @@ class WayfinderService {
   }
 
   /**
+   * Lazily create the deferred promise structure
+   * Used internally by waitForInstance()
+   */
+  private getInstanceDeferred() {
+    if (!this.instanceDeferred) {
+      let resolve!: (map: WayfinderMap) => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<WayfinderMap>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      this.instanceDeferred = { promise, resolve, reject };
+    }
+    return this.instanceDeferred;
+  }
+
+  /**
+   * Wait for the map instance to be available
+   * Returns immediately if already initialized, otherwise waits for init() to complete
+   * This is more efficient than polling getInstance() in a loop
+   */
+  waitForInstance(): Promise<WayfinderMap> {
+    if (this.instance) {
+      return Promise.resolve(this.instance);
+    }
+    return this.getInstanceDeferred().promise;
+  }
+
+  /**
    * Destroy the map instance and clean up resources
    */
   destroy(): void {
@@ -190,6 +241,8 @@ class WayfinderService {
         console.error('Error destroying instance:', error);
       }
       this.instance = null;
+      // Reset deferred so future waitForInstance() calls create a fresh promise
+      this.instanceDeferred = null;
     }
   }
 

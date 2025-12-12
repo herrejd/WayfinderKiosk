@@ -101,33 +101,12 @@ class DirectoryService {
   }
 
   /**
-   * Search for POIs by text query
-   * @param query - Search term
-   * @returns Matching POIs
-   */
-  /**
-   * Waits for the single map instance to be available.
+   * Get the map instance, waiting for initialization if needed
+   * Uses WayfinderService.waitForInstance() which is more efficient than polling
    * @private
    */
   private async getMapInstance(): Promise<WayfinderMap> {
-    return new Promise((resolve, reject) => {
-      const interval = 100; // ms
-      const timeout = 30000; // 30 seconds
-      let elapsedTime = 0;
-
-      const checkInstance = () => {
-        const instance = wayfinderService.getInstance();
-        if (instance) {
-          resolve(instance);
-        } else if (elapsedTime >= timeout) {
-          reject(new Error('Failed to get map instance: Timeout'));
-        } else {
-          elapsedTime += interval;
-          setTimeout(checkInstance, interval);
-        }
-      };
-      checkInstance();
-    });
+    return wayfinderService.waitForInstance();
   }
 
   /**

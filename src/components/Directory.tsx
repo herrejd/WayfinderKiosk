@@ -5,7 +5,7 @@
  * Allows users to browse and select POIs for navigation.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { directoryService, DirectoryPOI } from '@/services';
@@ -23,7 +23,8 @@ const TAB_CATEGORY_MAP: Record<TabType, POI['category']> = {
 
 interface POICardProps {
   poi: DirectoryPOI;
-  onClick: () => void;
+  onSelect: (poi: DirectoryPOI) => void;
+  walkingTimeText: string | null;
 }
 
 /**
@@ -42,30 +43,29 @@ function getWalkingTimeMinutes(distanceMeters: number): number {
 }
 
 /**
- * POI Card Component
+ * POI Card Component (Memoized)
  * Displays a single POI with image, name, category, and description
+ * Memoized to prevent unnecessary re-renders when parent updates
  */
-function POICard({ poi, onClick }: POICardProps) {
-  const { t } = useTranslation();
+const POICard = memo(function POICard({ poi, onSelect, walkingTimeText }: POICardProps) {
   const imageUrl = poi.images && poi.images.length > 0 ? poi.images[0] : null;
   const displayCategory = poi.category
     ? poi.category.split('.').pop()?.replace(/-/g, ' ') || 'Location'
     : 'Location';
-  const walkingTimeMinutes = poi.distanceFromKiosk ? getWalkingTimeMinutes(poi.distanceFromKiosk) : null;
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => onSelect(poi)}
       className="w-full bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-200 overflow-hidden text-left group focus:outline-none focus:ring-4 focus:ring-blue-500 relative"
     >
       {/* Walking Time Badge */}
-      {walkingTimeMinutes !== null && (
+      {walkingTimeText && (
         <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md flex items-center gap-1 z-10">
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
-          {t('directory.walkTime', { minutes: walkingTimeMinutes })}
+          {walkingTimeText}
         </div>
       )}
 
@@ -121,7 +121,7 @@ function POICard({ poi, onClick }: POICardProps) {
       </div>
     </button>
   );
-}
+});
 
 /**
  * Directory Component
@@ -219,12 +219,12 @@ export default function Directory() {
   };
 
   /**
-   * Handle POI selection
+   * Handle POI selection (memoized for stable reference)
    */
-  const handlePOIClick = (poi: DirectoryPOI) => {
+  const handlePOIClick = useCallback((poi: DirectoryPOI) => {
     setSelectedPOI(poi);
     updateInteraction();
-  };
+  }, [updateInteraction]);
 
   /**
    * Handle "Get Directions" action
@@ -457,9 +457,22 @@ export default function Directory() {
         {/* POI Grid */}
         {!isLoadingPOIs && !error && filteredPOIs.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPOIs.map((poi) => (
-              <POICard key={poi.poiId} poi={poi} onClick={() => handlePOIClick(poi)} />
-            ))}
+            {filteredPOIs.map((poi) => {
+              const walkingMinutes = poi.distanceFromKiosk
+                ? getWalkingTimeMinutes(poi.distanceFromKiosk)
+                : null;
+              const walkingTimeText = walkingMinutes
+                ? t('directory.walkTime', { minutes: walkingMinutes })
+                : null;
+              return (
+                <POICard
+                  key={poi.poiId}
+                  poi={poi}
+                  onSelect={handlePOIClick}
+                  walkingTimeText={walkingTimeText}
+                />
+              );
+            })}
           </div>
         )}
 
