@@ -1,18 +1,30 @@
 {
   "common": {
     "back": "Retour",
+    "close": "Fermer",
     "search": "Rechercher",
     "loading": "Chargement...",
     "error": "Une erreur s'est produite",
     "retry": "Réessayer",
-    "noResults": "Aucun résultat trouvé"
+    "noResults": "Aucun résultat trouvé",
+    "min": "min",
+    "minutes": "minutes",
+    "metersAway": "mètres"
   },
   "idle": {
     "title": "Orientation à l'Aéroport",
     "subtitle": "Votre Assistant de Navigation",
-    "findGate": "Trouvez votre Porte",
+    "findGate": "Explorer la Carte",
     "directory": "Parcourir l'Annuaire",
     "touchPrompt": "Touchez pour commencer"
+  },
+  "security": {
+    "title": "Temps d'Attente Sécurité",
+    "closed": "Fermé",
+    "liveData": "Données en direct",
+    "standard": "Standard",
+    "precheck": "TSA PreCheck",
+    "clear": "CLEAR"
   },
   "gateFinder": {
     "title": "Trouvez votre Porte",
@@ -22,7 +34,6 @@
     "searchButton": "Rechercher la Porte",
     "gateResult": "Votre porte est",
     "walkingTime": "Temps de marche",
-    "minutes": "minutes",
     "navigate": "Naviguer vers la Porte"
   },
   "directory": {
@@ -30,7 +41,31 @@
     "shop": "Boutique",
     "dine": "Restaurant",
     "relax": "Détente",
+    "all": "Tout",
     "searchPlaceholder": "Rechercher des lieux...",
-    "getDirections": "Obtenir des Directions"
+    "getDirections": "Obtenir des Directions",
+    "walkTime": "{{minutes}} min à pied"
+  },
+  "map": {
+    "title": "Plan de l'Aéroport",
+    "clearRoute": "Effacer l'Itinéraire",
+    "yourLocation": "Vous Êtes Ici"
+  },
+  "qrCode": {
+    "scanToVisit": "Scannez pour Visiter",
+    "takeMapWithYou": "Emportez ce Plan",
+    "scanInstructions": "Scannez ce code QR avec votre téléphone pour visiter:",
+    "openCamera": "Ouvrez l'appareil photo pour scanner"
+  },
+  "accessibility": {
+    "title": "Options d'Accessibilité",
+    "highContrast": "Contraste Élevé",
+    "largeText": "Grand Texte",
+    "audioFeedback": "Audio"
+  },
+  "errors": {
+    "mapLoadFailed": "Erreur de Carte",
+    "tryAgain": "Veuillez réessayer ou demander de l'aide",
+    "offline": "Pas de connexion internet"
   }
 }

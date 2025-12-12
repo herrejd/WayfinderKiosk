@@ -4,16 +4,19 @@
  */
 
 import React, { useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { useGlobalErrorHandler } from '@/hooks/useGlobalErrorHandler';
 import { useInactivityTimer } from '@/hooks/useInactivityTimer';
 import { directoryService, wayfinderService } from '@/services';
+import { config } from '@/config';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import IdleScreen from '@/components/IdleScreen';
 import GateFinder from '@/components/GateFinder';
 import Directory from '@/components/Directory';
 import MapView from '@/components/MapView';
 import AccessibilityToolbar from '@/components/AccessibilityToolbar';
+import TakeMapButton from '@/components/TakeMapButton';
 
 /**
  * Renders the component for the current view
@@ -34,6 +37,7 @@ const CurrentView: React.FC<{ view: string }> = ({ view }) => {
  * Main application layout using state-based routing
  */
 const AppLayout: React.FC = () => {
+  const { i18n } = useTranslation();
   const currentView = useKioskStore((state) => state.currentView);
   const isMapVisible = useKioskStore((state) => state.isMapVisible);
   const isOffline = useKioskStore((state) => state.isOffline);
@@ -43,13 +47,20 @@ const AppLayout: React.FC = () => {
   // Stable callback for timeout
   const handleTimeout = useCallback(() => {
     console.log('Inactivity timeout - returning to idle screen');
+
+    // Reset the map using resetMap() before restoring state
+    const map = wayfinderService.getInstance();
+    if (map) {
+      map.resetMap();
+    }
+
     reset();
     wayfinderService.restoreInitialState();
   }, [reset]);
 
   // Set up inactivity timer to return to idle screen
   useInactivityTimer({
-    timeout: 60000,
+    timeout: config.inactivityTimeout,
     onTimeout: handleTimeout,
     enabled: true,
   });
@@ -59,6 +70,15 @@ const AppLayout: React.FC = () => {
     document.body.classList.toggle('high-contrast', userPreferences.accessibility.highContrast);
     document.body.classList.toggle('large-text', userPreferences.accessibility.largeText);
   }, [userPreferences.accessibility.highContrast, userPreferences.accessibility.largeText]);
+
+  // Sync UI and map language with store language
+  useEffect(() => {
+    // Update i18next language for kiosk UI
+    i18n.changeLanguage(userPreferences.language);
+    // Update map SDK language
+    wayfinderService.setLanguage(userPreferences.language);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userPreferences.language]);
 
   return (
     <div className="w-full h-full overflow-hidden bg-white">
@@ -82,6 +102,9 @@ const AppLayout: React.FC = () => {
       >
         <MapView />
       </div>
+
+      {/* Take Map With You Button - shows QR code for mobile */}
+      <TakeMapButton />
 
       {/* Accessibility Toolbar */}
       <AccessibilityToolbar />

@@ -7,21 +7,10 @@
  */
 
 import { useKioskStore } from '@/store/kioskStore';
+import { config } from '@/config';
 import type { LMInitSDK, WayfinderMap, WayfinderConfig } from '@/types/wayfinder-sdk';
 
 const SDK_URL = 'https://maps.locuslabs.com/sdk/LocusMapsSDK.js';
-
-const KIOSK_CONFIG = {
-  accountId: 'A18L64IIIUQX7L',
-  venueId: 'llia',
-  kioskLocation: {
-    pinTitle: 'You Are Here',
-    lat: 36.08516393497611,
-    lng: -115.15065662098584,
-    floorId: 'llia-terminal1-departures',
-    structureId: 'llia-terminal1',
-  },
-} as const;
 
 class WayfinderService {
   private LMInit: LMInitSDK | null = null;
@@ -89,11 +78,12 @@ class WayfinderService {
 
     const LMInit = await this.loadSDK();
 
-    const config: WayfinderConfig = {
-      accountId: KIOSK_CONFIG.accountId,
-      venueId: KIOSK_CONFIG.venueId,
+    // Build SDK configuration from environment variables
+    const sdkConfig: WayfinderConfig = {
+      accountId: config.wayfinder.accountId,
+      venueId: config.wayfinder.venueId,
       headless: false,
-      pinnedLocation: KIOSK_CONFIG.kioskLocation,
+      pinnedLocation: config.kioskLocation,
       pinnedLocationZoom: 18,
       pinnedLocationFocusAtStart: true,
       uiHide: {
@@ -101,12 +91,43 @@ class WayfinderService {
         levelSelector: false,
         controls: false,
       },
-      name: 'Atrius Aiport',
+      name: config.appName,
       noLangOptions: false,
     };
 
+    // Add POI categories for quick actions if configured (all languages)
+    if (config.poiCategoriesConfig) {
+      // Spread all POI category keys (poiCategories, poiCategories-es, poiCategories-fr) into SDK config
+      Object.entries(config.poiCategoriesConfig).forEach(([key, value]) => {
+        (sdkConfig as any)[key] = value;
+      });
+      console.log('Added POI categories to config:', Object.keys(config.poiCategoriesConfig));
+    }
+
+    // Configure plugins
+    const plugins: Record<string, unknown> = {};
+
+    // Add flight status plugin if enabled
+    if (config.flightStatusEnabled) {
+      const flightStatusConfig: Record<string, unknown> = {};
+
+      // Add API key if provided
+      if (config.flightStatusApiKey) {
+        flightStatusConfig.apiKey = config.flightStatusApiKey;
+      }
+
+      plugins.flightStatus = flightStatusConfig;
+      console.log('Flight status plugin enabled');
+    }
+
+    // Add plugins to SDK config if any are configured
+    if (Object.keys(plugins).length > 0) {
+      (sdkConfig as any).plugins = plugins;
+      console.log('Final SDK plugins config:', JSON.stringify(plugins, null, 2));
+    }
+
     try {
-      this.instance = await LMInit.newMap(container, config);
+      this.instance = await LMInit.newMap(container, sdkConfig);
       this.setupEventListeners(this.instance);
       return this.instance;
     } catch (error) {
@@ -197,10 +218,26 @@ class WayfinderService {
    */
   getKioskLocation() {
     return {
-      lat: KIOSK_CONFIG.kioskLocation.lat,
-      lng: KIOSK_CONFIG.kioskLocation.lng,
-      floorId: KIOSK_CONFIG.kioskLocation.floorId,
+      lat: config.kioskLocation.lat,
+      lng: config.kioskLocation.lng,
+      floorId: config.kioskLocation.floorId,
     };
+  }
+
+  /**
+   * Set the map UI language
+   * POI categories for each language are loaded at initialization time
+   * @param language - Language code ('en', 'es', 'fr')
+   */
+  setLanguage(language: 'en' | 'es' | 'fr'): void {
+    if (this.instance) {
+      try {
+        (this.instance as any).setLanguage(language);
+        console.log(`Map language set to: ${language}`);
+      } catch (error) {
+        console.error('Error setting map language:', error);
+      }
+    }
   }
 }
 

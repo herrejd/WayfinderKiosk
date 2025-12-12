@@ -14,7 +14,8 @@ export type ViewType = 'idle' | 'gate-finder' | 'directory' | 'map';
 export interface KioskState {
   // State properties
   currentView: ViewType;
-  isMapVisible: boolean; // New state to control map visibility
+  isMapVisible: boolean; // Controls map visibility
+  isMapReady: boolean; // True when map SDK is initialized and ready
   selectedPOI: POI | null;
   lastInteraction: Date;
   language: 'en' | 'es' | 'fr';
@@ -23,11 +24,13 @@ export interface KioskState {
   userPreferences: UserPreferences;
   errorMessage: string | null;
   isLoading: boolean;
-  initialMapState: string | null; // New state for map's initial state
+  initialMapState: string | null; // Map's initial state for restoration
+  qrCodeUrl: string | null; // URL to display as QR code
 
   // Actions
   setView: (view: ViewType) => void;
-  setMapVisible: (isVisible: boolean) => void; // New action
+  setMapVisible: (isVisible: boolean) => void;
+  setMapReady: (isReady: boolean) => void;
   selectPOI: (poi: POI | null) => void;
   updateInteraction: () => void;
   setLanguage: (language: 'en' | 'es' | 'fr') => void;
@@ -36,7 +39,8 @@ export interface KioskState {
   setErrorMessage: (message: string | null) => void;
   setLoading: (isLoading: boolean) => void;
   setUserPreferences: (preferences: Partial<UserPreferences>) => void;
-  setInitialMapState: (state: string) => void; // New action
+  setInitialMapState: (state: string) => void;
+  setQrCodeUrl: (url: string | null) => void;
   reset: () => void;
 }
 
@@ -68,10 +72,13 @@ const initialState: Omit<
   | 'setUserPreferences'
   | 'reset'
   | 'setMapVisible'
-  | 'setInitialMapState' // Add new action to omit list
+  | 'setMapReady'
+  | 'setInitialMapState'
+  | 'setQrCodeUrl'
 > = {
   currentView: 'idle',
   isMapVisible: false,
+  isMapReady: false,
   selectedPOI: null,
   lastInteraction: new Date(),
   language: 'en',
@@ -80,7 +87,8 @@ const initialState: Omit<
   userPreferences: defaultUserPreferences,
   errorMessage: null,
   isLoading: false,
-  initialMapState: null, // Add to initial state
+  initialMapState: null,
+  qrCodeUrl: null,
 };
 
 /**
@@ -107,6 +115,16 @@ export const useKioskStore = create<KioskState>()(
           set({ isMapVisible: isVisible }, false, {
             type: 'setMapVisible',
             payload: isVisible,
+          });
+        },
+
+        /**
+         * Set the map ready state (SDK initialized)
+         */
+        setMapReady: (isReady: boolean) => {
+          set({ isMapReady: isReady }, false, {
+            type: 'setMapReady',
+            payload: isReady,
           });
         },
 
@@ -228,11 +246,31 @@ export const useKioskStore = create<KioskState>()(
         },
 
         /**
+         * Set QR code URL to display in modal
+         * Set to null to close the modal
+         */
+        setQrCodeUrl: (url: string | null) => {
+          set({ qrCodeUrl: url }, false, {
+            type: 'setQrCodeUrl',
+            payload: url,
+          });
+        },
+
+        /**
          * Reset store to initial state
          * Used for inactivity timeout and error recovery
+         * Also closes QR code modal and resets map
+         * Preserves isMapReady since it reflects SDK initialization state
          */
         reset: () => {
-          set(initialState, false, { type: 'reset' });
+          set(
+            (state) => ({
+              ...initialState,
+              isMapReady: state.isMapReady, // Preserve SDK init state
+            }),
+            false,
+            { type: 'reset' }
+          );
         },
       }),
       {

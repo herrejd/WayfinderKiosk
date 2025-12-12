@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { directoryService, type SecurityWaitTime } from '@/services';
 
@@ -12,6 +13,7 @@ import { directoryService, type SecurityWaitTime } from '@/services';
  * Shows current wait times for security checkpoints
  */
 function SecurityWaitTimes() {
+  const { t } = useTranslation();
   const [waitTimes, setWaitTimes] = useState<SecurityWaitTime[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,14 +72,14 @@ function SecurityWaitTimes() {
   const formatQueueType = (type: string) => {
     switch (type.toLowerCase()) {
       case 'clear':
-        return 'CLEAR';
+        return t('security.clear');
       case 'precheck':
       case 'tsa_precheck':
-        return 'TSA PreCheck';
+        return t('security.precheck');
       case 'tsa':
       case 'standard':
       default:
-        return 'Standard';
+        return t('security.standard');
     }
   };
 
@@ -92,7 +94,7 @@ function SecurityWaitTimes() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        Security Wait Times
+        {t('security.title')}
       </h2>
 
       <div className="space-y-2">
@@ -121,11 +123,11 @@ function SecurityWaitTimes() {
             </div>
             <div className={`text-2xl font-bold ${getWaitTimeColor(wt.waitTimeMinutes, wt.isTemporarilyClosed)}`}>
               {wt.isTemporarilyClosed ? (
-                <span className="text-base">Closed</span>
+                <span className="text-base">{t('security.closed')}</span>
               ) : (
                 <>
                   {wt.waitTimeMinutes}
-                  <span className="text-sm font-normal ml-1">min</span>
+                  <span className="text-sm font-normal ml-1">{t('common.min')}</span>
                 </>
               )}
             </div>
@@ -137,7 +139,7 @@ function SecurityWaitTimes() {
       {waitTimes.some(wt => wt.isRealTime) && (
         <div className="mt-3 flex items-center gap-1 text-xs text-gray-500">
           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-          Live data
+          {t('security.liveData')}
         </div>
       )}
     </div>
@@ -145,6 +147,7 @@ function SecurityWaitTimes() {
 }
 
 export const IdleScreen: React.FC = () => {
+  const { t } = useTranslation();
   const setView = useKioskStore((state) => state.setView);
   const setMapVisible = useKioskStore((state) => state.setMapVisible);
   const selectPOI = useKioskStore((state) => state.selectPOI);
@@ -170,10 +173,10 @@ export const IdleScreen: React.FC = () => {
       {/* Header */}
       <header className="absolute top-8 left-0 right-0 text-center">
         <h1 className="text-6xl font-bold text-gray-900 drop-shadow-lg">
-          Airport Wayfinder
+          {t('idle.title')}
         </h1>
         <p className="text-2xl text-gray-700 mt-2">
-          Your Navigation Assistant
+          {t('idle.subtitle')}
         </p>
       </header>
 
@@ -195,7 +198,7 @@ export const IdleScreen: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
-            Find Your Gate
+            {t('idle.findGate')}
           </span>
         </button>
 
@@ -212,7 +215,7 @@ export const IdleScreen: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            Browse Directory
+            {t('idle.directory')}
           </span>
         </button>
       </main>
@@ -237,7 +240,7 @@ export const IdleScreen: React.FC = () => {
 
       {/* Touch prompt */}
       <div className="absolute bottom-24 text-gray-600 text-xl animate-pulse">
-        Touch to begin
+        {t('idle.touchPrompt')}
       </div>
     </div>
   );

@@ -1,18 +1,30 @@
 {
   "common": {
     "back": "Back",
+    "close": "Close",
     "search": "Search",
     "loading": "Loading...",
     "error": "Something went wrong",
     "retry": "Try Again",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "min": "min",
+    "minutes": "minutes",
+    "metersAway": "meters away"
   },
   "idle": {
     "title": "Airport Wayfinder",
     "subtitle": "Your Navigation Assistant",
-    "findGate": "Find Your Gate",
+    "findGate": "Explore the Map",
     "directory": "Browse Directory",
     "touchPrompt": "Touch to begin"
+  },
+  "security": {
+    "title": "Security Wait Times",
+    "closed": "Closed",
+    "liveData": "Live data",
+    "standard": "Standard",
+    "precheck": "TSA PreCheck",
+    "clear": "CLEAR"
   },
   "gateFinder": {
     "title": "Find Your Gate",
@@ -22,7 +34,6 @@
     "searchButton": "Search Gate",
     "gateResult": "Your gate is",
     "walkingTime": "Walking time",
-    "minutes": "minutes",
     "navigate": "Navigate to Gate"
   },
   "directory": {
@@ -30,7 +41,31 @@
     "shop": "Shop",
     "dine": "Dine",
     "relax": "Relax",
+    "all": "All",
     "searchPlaceholder": "Search locations...",
-    "getDirections": "Get Directions"
+    "getDirections": "Get Directions",
+    "walkTime": "{{minutes}} min walk"
+  },
+  "map": {
+    "title": "Airport Map",
+    "clearRoute": "Clear Route",
+    "yourLocation": "You Are Here"
+  },
+  "qrCode": {
+    "scanToVisit": "Scan to Visit Website",
+    "takeMapWithYou": "Take This Map With You",
+    "scanInstructions": "Scan this QR code with your phone to visit:",
+    "openCamera": "Open your phone's camera app to scan"
+  },
+  "accessibility": {
+    "title": "Accessibility Options",
+    "highContrast": "High Contrast",
+    "largeText": "Large Text",
+    "audioFeedback": "Audio Feedback"
+  },
+  "errors": {
+    "mapLoadFailed": "Map Error",
+    "tryAgain": "Please try again or contact assistance",
+    "offline": "No internet connection"
   }
 }

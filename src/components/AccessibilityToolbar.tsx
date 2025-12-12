@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 
 /**
@@ -12,6 +13,7 @@ import { useKioskStore } from '@/store/kioskStore';
  * Located at bottom-right of screen with floating button that expands to show options
  */
 export const AccessibilityToolbar: React.FC = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const userPreferences = useKioskStore((state) => state.userPreferences);
   const setUserPreferences = useKioskStore((state) => state.setUserPreferences);
@@ -81,7 +83,7 @@ export const AccessibilityToolbar: React.FC = () => {
               }`}
             >
               <span className="text-xl">◐</span>
-              <span>High Contrast</span>
+              <span>{t('accessibility.highContrast')}</span>
             </button>
 
             {/* Large Text Button */}
@@ -100,7 +102,7 @@ export const AccessibilityToolbar: React.FC = () => {
               }`}
             >
               <span className="text-xl">A+</span>
-              <span>Large Text</span>
+              <span>{t('accessibility.largeText')}</span>
             </button>
 
             {/* Audio Feedback Button */}
@@ -119,7 +121,7 @@ export const AccessibilityToolbar: React.FC = () => {
               }`}
             >
               <span className="text-xl">🔊</span>
-              <span>Audio Feedback</span>
+              <span>{t('accessibility.audioFeedback')}</span>
             </button>
           </div>
         </div>

@@ -1,18 +1,30 @@
 {
   "common": {
     "back": "Atrás",
+    "close": "Cerrar",
     "search": "Buscar",
     "loading": "Cargando...",
     "error": "Algo salió mal",
     "retry": "Intentar de nuevo",
-    "noResults": "No se encontraron resultados"
+    "noResults": "No se encontraron resultados",
+    "min": "min",
+    "minutes": "minutos",
+    "metersAway": "metros"
   },
   "idle": {
     "title": "Orientación en el Aeropuerto",
     "subtitle": "Tu Asistente de Navegación",
-    "findGate": "Encuentra tu Puerta",
+    "findGate": "Explorar el Mapa",
     "directory": "Explorar Directorio",
     "touchPrompt": "Toca para comenzar"
+  },
+  "security": {
+    "title": "Tiempos de Espera en Seguridad",
+    "closed": "Cerrado",
+    "liveData": "Datos en vivo",
+    "standard": "Estándar",
+    "precheck": "TSA PreCheck",
+    "clear": "CLEAR"
   },
   "gateFinder": {
     "title": "Encuentra tu Puerta",
@@ -22,7 +34,6 @@
     "searchButton": "Buscar Puerta",
     "gateResult": "Tu puerta es",
     "walkingTime": "Tiempo de caminata",
-    "minutes": "minutos",
     "navigate": "Navegar a la Puerta"
   },
   "directory": {
@@ -30,7 +41,31 @@
     "shop": "Tienda",
     "dine": "Restaurante",
     "relax": "Relajarse",
+    "all": "Todo",
     "searchPlaceholder": "Buscar ubicaciones...",
-    "getDirections": "Obtener Direcciones"
+    "getDirections": "Obtener Direcciones",
+    "walkTime": "{{minutes}} min caminando"
+  },
+  "map": {
+    "title": "Mapa del Aeropuerto",
+    "clearRoute": "Borrar Ruta",
+    "yourLocation": "Estás Aquí"
+  },
+  "qrCode": {
+    "scanToVisit": "Escanea para Visitar",
+    "takeMapWithYou": "Lleva Este Mapa Contigo",
+    "scanInstructions": "Escanea este código QR con tu teléfono para visitar:",
+    "openCamera": "Abre la cámara de tu teléfono para escanear"
+  },
+  "accessibility": {
+    "title": "Opciones de Accesibilidad",
+    "highContrast": "Alto Contraste",
+    "largeText": "Texto Grande",
+    "audioFeedback": "Audio"
+  },
+  "errors": {
+    "mapLoadFailed": "Error del Mapa",
+    "tryAgain": "Intenta de nuevo o contacta asistencia",
+    "offline": "Sin conexión a internet"
   }
 }

@@ -4,19 +4,25 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { WayfinderMap } from './WayfinderMap';
 import { wayfinderService } from '@/services';
 import { parseFloorId } from '@/utils/floorParser';
 
 export const MapView: React.FC = () => {
+  const { t } = useTranslation();
   const selectedPOI = useKioskStore((state) => state.selectedPOI);
   const selectPOI = useKioskStore((state) => state.selectPOI);
   const setNavigating = useKioskStore((state) => state.setNavigating);
   const setView = useKioskStore((state) => state.setView);
   const setMapVisible = useKioskStore((state) => state.setMapVisible);
+  const setQrCodeUrl = useKioskStore((state) => state.setQrCodeUrl);
 
   const handleBack = () => {
+    // Close any open QR code modal
+    setQrCodeUrl(null);
+
     // Call resetMap() directly on the map instance
     const map = wayfinderService.getInstance();
     if (map) {
@@ -33,6 +39,9 @@ export const MapView: React.FC = () => {
   };
 
   const handleClearRoute = () => {
+    // Close any open QR code modal
+    setQrCodeUrl(null);
+
     // Call resetMap() directly on the map instance
     const map = wayfinderService.getInstance();
     if (map) {
@@ -86,7 +95,7 @@ export const MapView: React.FC = () => {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back
+            {t('common.back')}
           </button>
 
           {/* Title */}
@@ -115,7 +124,7 @@ export const MapView: React.FC = () => {
                 {selectedPOI.name}
               </span>
             ) : (
-              'Airport Map'
+              t('map.title')
             )}
           </h1>
 
@@ -141,7 +150,7 @@ export const MapView: React.FC = () => {
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-              Clear Route
+              {t('map.clearRoute')}
             </button>
           ) : (
             <div className="w-[140px]" /> /* Spacer to center title */
@@ -183,7 +192,7 @@ export const MapView: React.FC = () => {
                       d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                     />
                   </svg>
-                  {Math.round(selectedPOI.distanceMeters)} meters away
+                  {Math.round(selectedPOI.distanceMeters)} {t('common.metersAway')}
                 </span>
               )}
               <span className="flex items-center gap-2 text-lg capitalize">

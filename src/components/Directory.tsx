@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { directoryService, DirectoryPOI } from '@/services';
 import { parseFloorId } from '@/utils/floorParser';
@@ -26,20 +27,48 @@ interface POICardProps {
 }
 
 /**
+ * Calculate walking time in minutes from distance
+ * @param distanceMeters - Distance in meters
+ * @returns Walking time in minutes
+ */
+function getWalkingTimeMinutes(distanceMeters: number): number {
+  // Convert meters to feet: 1 meter = 3.28084 feet
+  const distanceFeet = distanceMeters * 3.28084;
+  // Walking speed: 3 feet per second
+  const walkingSpeedFPS = 3;
+  // Calculate time in seconds, then convert to minutes
+  const timeSeconds = distanceFeet / walkingSpeedFPS;
+  return Math.ceil(timeSeconds / 60);
+}
+
+/**
  * POI Card Component
  * Displays a single POI with image, name, category, and description
  */
 function POICard({ poi, onClick }: POICardProps) {
+  const { t } = useTranslation();
   const imageUrl = poi.images && poi.images.length > 0 ? poi.images[0] : null;
   const displayCategory = poi.category
     ? poi.category.split('.').pop()?.replace(/-/g, ' ') || 'Location'
     : 'Location';
+  const walkingTimeMinutes = poi.distanceFromKiosk ? getWalkingTimeMinutes(poi.distanceFromKiosk) : null;
 
   return (
     <button
       onClick={onClick}
-      className="w-full bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-200 overflow-hidden text-left group focus:outline-none focus:ring-4 focus:ring-blue-500"
+      className="w-full bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-200 overflow-hidden text-left group focus:outline-none focus:ring-4 focus:ring-blue-500 relative"
     >
+      {/* Walking Time Badge */}
+      {walkingTimeMinutes !== null && (
+        <div className="absolute top-3 right-3 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md flex items-center gap-1 z-10">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          {t('directory.walkTime', { minutes: walkingTimeMinutes })}
+        </div>
+      )}
+
       {/* Image */}
       <div className="w-full h-48 bg-gray-200 overflow-hidden">
         {imageUrl ? (
@@ -99,6 +128,7 @@ function POICard({ poi, onClick }: POICardProps) {
  * Main view for browsing categorized POIs
  */
 export default function Directory() {
+  const { t } = useTranslation();
   const selectPOI = useKioskStore((state) => state.selectPOI);
   const setLoading = useKioskStore((state) => state.setLoading);
   const setErrorMessage = useKioskStore((state) => state.setErrorMessage);
@@ -261,10 +291,10 @@ export default function Directory() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            <span className="text-lg font-medium">Back</span>
+            <span className="text-lg font-medium">{t('common.back')}</span>
           </button>
 
-          <h1 className="text-3xl font-bold text-gray-900">Airport Directory</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('directory.title')}</h1>
 
           <div className="w-24" /> {/* Spacer for centering */}
         </div>
@@ -282,7 +312,7 @@ export default function Directory() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Shop
+              {t('directory.shop')}
             </button>
             <button
               onClick={() => handleTabChange('dine')}
@@ -292,7 +322,7 @@ export default function Directory() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Dine
+              {t('directory.dine')}
             </button>
             <button
               onClick={() => handleTabChange('relax')}
@@ -302,7 +332,7 @@ export default function Directory() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Relax
+              {t('directory.relax')}
             </button>
           </div>
         </div>
@@ -319,7 +349,7 @@ export default function Directory() {
                 setSearchQuery(e.target.value);
                 updateInteraction();
               }}
-              placeholder="Search locations..."
+              placeholder={t('directory.searchPlaceholder')}
               className="w-full h-14 pl-12 pr-12 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
             />
             <svg
@@ -360,7 +390,7 @@ export default function Directory() {
         {isLoadingPOIs && !error && (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-xl text-gray-600">Loading locations...</p>
+            <p className="text-xl text-gray-600">{t('common.loading')}</p>
           </div>
         )}
 
@@ -380,13 +410,13 @@ export default function Directory() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h3 className="text-xl font-semibold text-red-900 mb-2">Error Loading Locations</h3>
+            <h3 className="text-xl font-semibold text-red-900 mb-2">{t('common.error')}</h3>
             <p className="text-red-700">{error}</p>
             <button
               onClick={() => window.location.reload()}
               className="mt-4 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:outline-none focus:ring-4 focus:ring-red-300"
             >
-              Retry
+              {t('common.retry')}
             </button>
           </div>
         )}
@@ -407,18 +437,18 @@ export default function Directory() {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            <h3 className="text-2xl font-semibold text-gray-700 mb-2">No Locations Found</h3>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">{t('common.noResults')}</h3>
             <p className="text-gray-500">
               {searchQuery
-                ? `No results for "${searchQuery}". Try a different search.`
-                : 'No locations available in this category.'}
+                ? t('common.noResults')
+                : t('common.noResults')}
             </p>
             {searchQuery && (
               <button
                 onClick={handleClearSearch}
                 className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-300"
               >
-                Clear Search
+                {t('common.search')}
               </button>
             )}
           </div>
@@ -526,7 +556,7 @@ export default function Directory() {
                 onClick={handleGetDirections}
                 className="w-full mt-6 h-14 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-lg"
               >
-                Get Directions
+                {t('directory.getDirections')}
               </button>
             </div>
           </div>
