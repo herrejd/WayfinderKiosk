@@ -62,13 +62,119 @@ canvas {
   height: 100%;
 }
 
-/* High contrast mode */
+/* High contrast mode - WCAG compliant color palette */
 body.high-contrast {
-  --tw-bg-opacity: 1;
-  filter: contrast(1.2);
+  /* CSS Custom Properties for high contrast theme */
+  --hc-bg: #000000;
+  --hc-text: #ffffff;
+  --hc-accent: #1b08ec;
+  --hc-border: #ffffff;
+  --hc-focus: #1b08ec;
+
+  /* Apply base styles */
+  background-color: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
 }
-body.high-contrast * {
-  border-color: currentColor !important;
+
+/* High contrast - Typography */
+body.high-contrast h1,
+body.high-contrast h2,
+body.high-contrast h3,
+body.high-contrast h4,
+body.high-contrast h5,
+body.high-contrast h6,
+body.high-contrast p,
+body.high-contrast span,
+body.high-contrast div,
+body.high-contrast label {
+  color: var(--hc-text) !important;
+}
+
+/* High contrast - Links and interactive elements */
+body.high-contrast a,
+body.high-contrast button[type="button"]:not(.accessibility-toolbar-btn) {
+  color: var(--hc-bg) !important;
+  background-color: var(--hc-accent) !important;
+  border-color: var(--hc-accent) !important;
+}
+
+body.high-contrast a:hover,
+body.high-contrast button:hover {
+  background-color: var(--hc-text) !important;
+  color: var(--hc-bg) !important;
+  border-color: var(--hc-text) !important;
+}
+
+/* High contrast - Buttons */
+body.high-contrast button {
+  background-color: var(--hc-accent) !important;
+  color: var(--hc-bg) !important;
+  border: 2px solid var(--hc-accent) !important;
+}
+
+body.high-contrast button:disabled {
+  background-color: #666666 !important;
+  color: #cccccc !important;
+  border-color: #666666 !important;
+}
+
+/* High contrast - Input fields */
+body.high-contrast input,
+body.high-contrast textarea,
+body.high-contrast select {
+  background-color: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+  border: 2px solid var(--hc-border) !important;
+}
+
+body.high-contrast input::placeholder,
+body.high-contrast textarea::placeholder {
+  color: #cccccc !important;
+}
+
+/* High contrast - Cards and containers */
+body.high-contrast .card,
+body.high-contrast [class*="bg-white"],
+body.high-contrast [class*="bg-gray"],
+body.high-contrast [class*="bg-blue"] {
+  background-color: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+  border: 2px solid var(--hc-border) !important;
+}
+
+/* High contrast - Borders */
+body.high-contrast *[class*="border"] {
+  border-color: var(--hc-border) !important;
+}
+
+/* High contrast - Focus rings */
+body.high-contrast *:focus,
+body.high-contrast *:focus-visible {
+  outline: 3px solid var(--hc-focus) !important;
+  outline-offset: 2px !important;
+}
+
+/* High contrast - Navigation elements */
+body.high-contrast nav,
+body.high-contrast header,
+body.high-contrast footer {
+  background-color: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+  border-color: var(--hc-border) !important;
+}
+
+/* High contrast - Icons (ensure visibility) */
+body.high-contrast svg,
+body.high-contrast img {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+body.high-contrast svg[class*="text-"],
+body.high-contrast svg path,
+body.high-contrast svg circle,
+body.high-contrast svg rect {
+  fill: currentColor !important;
+  stroke: currentColor !important;
 }
 
 /* Large text mode */

@@ -37,20 +37,29 @@ const KeyButton = memo(function KeyButton({
   className = '',
   ariaLabel
 }: KeyButtonProps) {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  }, [onClick]);
+
   return (
     <button
       type="button"
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       aria-label={ariaLabel || label}
+      tabIndex={0}
       className={`
         flex items-center justify-center
-        bg-white hover:bg-gray-100 active:bg-gray-200
+        bg-white hover:bg-gray-50 active:bg-gray-100
         border border-gray-300 rounded-lg
         text-gray-800 font-semibold
-        transition-colors duration-100
+        transition-all duration-150
         min-h-[56px] min-w-[48px]
-        shadow-sm hover:shadow
-        focus:outline-none focus:ring-2 focus:ring-blue-500
+        shadow-md hover:shadow-lg
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         ${className}
       `}
     >
@@ -106,7 +115,7 @@ export const VirtualKeyboard = memo(function VirtualKeyboard() {
 
       {/* Keyboard Modal */}
       <div
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-100 border-2 border-gray-300 rounded-2xl shadow-2xl max-w-2xl w-auto"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-b from-gray-50 to-gray-100 border-2 border-gray-300 rounded-2xl shadow-2xl max-w-2xl w-auto"
         role="application"
         aria-label={t('keyboard.title')}
       >
@@ -120,7 +129,7 @@ export const VirtualKeyboard = memo(function VirtualKeyboard() {
                 label={isShift ? '⬆' : '⇧'}
                 onClick={toggleShift}
                 ariaLabel={t('keyboard.shift')}
-                className={`w-16 text-xl ${isShift ? 'bg-blue-100 border-blue-400' : ''}`}
+                className={`w-16 text-xl ${isShift ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 active:bg-blue-800' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 active:bg-blue-800'}`}
               />
             )}
 
@@ -139,7 +148,7 @@ export const VirtualKeyboard = memo(function VirtualKeyboard() {
                 label="⌫"
                 onClick={handleBackspace}
                 ariaLabel={t('keyboard.backspace')}
-                className="w-16 text-xl"
+                className="w-16 text-xl bg-blue-600 text-white border-blue-600 hover:bg-blue-700 active:bg-blue-800"
               />
             )}
           </div>
@@ -151,21 +160,21 @@ export const VirtualKeyboard = memo(function VirtualKeyboard() {
             label={layout === 'letters' ? '123' : 'ABC'}
             onClick={toggleLayout}
             ariaLabel={layout === 'letters' ? t('keyboard.numbers') : t('keyboard.letters')}
-            className="w-20 text-lg"
+            className="w-20 text-lg bg-blue-600 text-white border-blue-600 hover:bg-blue-700 active:bg-blue-800"
           />
 
           <KeyButton
             label={t('keyboard.space')}
             onClick={handleSpace}
             ariaLabel={t('keyboard.space')}
-            className="flex-1 max-w-md text-lg"
+            className="flex-1 max-w-md text-lg bg-blue-600 text-white border-blue-600 hover:bg-blue-700 active:bg-blue-800"
           />
 
           <KeyButton
             label={t('keyboard.done')}
             onClick={handleDone}
             ariaLabel={t('keyboard.done')}
-            className="w-24 text-lg bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 border-blue-600"
+            className="w-24 text-lg bg-blue-600 text-white border-blue-600 hover:bg-blue-700 active:bg-blue-800"
           />
         </div>
         </div>

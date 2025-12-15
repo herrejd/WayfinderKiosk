@@ -79,6 +79,8 @@ const AppLayout: React.FC = () => {
     i18n.changeLanguage(userPreferences.language);
     // Update map SDK language
     wayfinderService.setLanguage(userPreferences.language);
+    // Update HTML lang attribute for accessibility
+    document.documentElement.lang = userPreferences.language;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userPreferences.language]);
 
