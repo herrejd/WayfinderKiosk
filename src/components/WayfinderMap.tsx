@@ -6,6 +6,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { wayfinderService } from '@/services';
 import { useKioskStore } from '@/store/kioskStore';
+import { config } from '@/config';
+import { QRCodeModal } from './QRCodeModal';
 
 interface WayfinderMapProps {
   className?: string;
@@ -29,12 +31,16 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
   const setFlightSearchQuery = useKioskStore((state) => state.setFlightSearchQuery);
   const isMapReadyGlobal = useKioskStore((state) => state.isMapReady);
   const setMapReadyGlobal = useKioskStore((state) => state.setMapReady);
+  const qrCodeUrl = useKioskStore((state) => state.qrCodeUrl);
+  const setQrCodeUrl = useKioskStore((state) => state.setQrCodeUrl);
   const initStartedRef = useRef(false);
   const navigationShownRef = useRef(false);
+  const mapContainerNodeRef = useRef<HTMLDivElement | null>(null);
 
   // Use callback ref to initialize map when container is ready
   const mapContainerRef = useCallback(
     (node: HTMLDivElement | null) => {
+      mapContainerNodeRef.current = node;
       if (!node || initStartedRef.current) return;
       initStartedRef.current = true;
 
@@ -75,6 +81,45 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
       }
     };
   }, [mapReady]);
+
+  // Intercept external link clicks and show QR code instead
+  useEffect(() => {
+    const container = mapContainerNodeRef.current;
+    if (!container || !mapReady) return;
+
+    const handleLinkClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      // Find the closest anchor element
+      const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+
+      // Check if it's an external link (starts with http/https and has target="_blank")
+      const isExternal =
+        (href.startsWith('http://') || href.startsWith('https://')) &&
+        (anchor.getAttribute('target') === '_blank' || !href.includes(window.location.hostname));
+
+      if (isExternal) {
+        // Prevent the default link behavior
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Show QR code modal instead
+        setQrCodeUrl(href);
+        console.log('Intercepted external link:', href);
+      }
+    };
+
+    // Use capture phase to intercept before SDK handles it
+    container.addEventListener('click', handleLinkClick, true);
+
+    return () => {
+      container.removeEventListener('click', handleLinkClick, true);
+    };
+  }, [mapReady, setQrCodeUrl]);
 
   // Effect to capture the initial map state, runs only when map is first ready.
   useEffect(() => {
@@ -222,6 +267,19 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
             <p className="text-lg text-red-500 mt-2">Please try again or contact assistance</p>
           </div>
         </div>
+      )}
+
+      {/* QR Code Modal for external links and "Take Map With You" */}
+      {qrCodeUrl && (
+        <QRCodeModal
+          url={qrCodeUrl}
+          onClose={() => setQrCodeUrl(null)}
+          title={
+            config.mapQrBaseUrl && qrCodeUrl.startsWith(config.mapQrBaseUrl)
+              ? 'Take This Map With You'
+              : undefined
+          }
+        />
       )}
     </div>
   );

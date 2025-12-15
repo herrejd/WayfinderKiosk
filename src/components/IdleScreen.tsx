@@ -1,7 +1,17 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { useKeyboard, useKeyboardInput } from '@/context/KeyboardContext';
+
+// Background images to cycle through
+const BACKGROUND_IMAGES = [
+  '/assets/Airportbackdrop.png',
+  '/assets/AirportInterior.png',
+  '/assets/AirportTarmac.png',
+];
+
+const CYCLE_INTERVAL = 8000; // 8 seconds between transitions
+const TRANSITION_DURATION = 1500; // 1.5 second crossfade
 
 export const IdleScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -16,6 +26,18 @@ export const IdleScreen: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { handleFocus } = useKeyboardInput(inputRef, flightNumber, setFlightNumber);
+
+  // Background image cycling state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Cycle through background images
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % BACKGROUND_IMAGES.length);
+    }, CYCLE_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleExploreMap = () => {
     setView('map');
@@ -59,16 +81,30 @@ export const IdleScreen: React.FC = () => {
   }, [isKeyboardVisible]);
 
   return (
-    <div
-      className="w-screen h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 touch-none select-none"
-      style={{
-        backgroundImage: `url('/assets/Airportbackdrop.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      <header className="absolute top-8 text-center">
+    <div className="w-screen h-screen flex flex-col items-center justify-center touch-none select-none relative overflow-hidden">
+      {/* Background image layers for crossfade effect */}
+      {BACKGROUND_IMAGES.map((image, index) => (
+        <div
+          key={image}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity ease-in-out"
+          style={{
+            backgroundImage: `url('${image}')`,
+            opacity: index === currentImageIndex ? 1 : 0,
+            transitionDuration: `${TRANSITION_DURATION}ms`,
+            zIndex: 0,
+          }}
+          aria-hidden="true"
+        />
+      ))}
+
+      {/* Gradient overlay for better text readability */}
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-blue-800/20 to-blue-900/40"
+        style={{ zIndex: 1 }}
+        aria-hidden="true"
+      />
+
+      <header className="absolute top-8 text-center" style={{ zIndex: 2 }}>
         <h1 className="text-6xl font-bold text-white drop-shadow-lg">
           {t('idle.title')}
         </h1>
@@ -78,7 +114,7 @@ export const IdleScreen: React.FC = () => {
       </header>
 
       {/* Main Action Buttons */}
-      <main className={`flex flex-col gap-8 mt-16 transition-all duration-300 ${keyboardPadding}`}>
+      <main className={`flex flex-col gap-8 mt-16 transition-all duration-300 ${keyboardPadding} relative z-10`}>
         <button
           onClick={handleExploreMap}
           className="min-w-[400px] min-h-[140px] bg-white text-blue-700 text-4xl font-bold rounded-3xl shadow-2xl hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-white/50"
@@ -153,7 +189,7 @@ export const IdleScreen: React.FC = () => {
       </main>
 
       {/* Language Selector and Touch Prompt */}
-      <footer className="absolute bottom-8 flex flex-col items-center gap-4">
+      <footer className="absolute bottom-8 flex flex-col items-center gap-4 z-10">
         <div className="flex gap-4">
           {(['en', 'es', 'fr'] as const).map((lang) => (
             <button
