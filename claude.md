@@ -97,6 +97,52 @@ All components now have audio feedback wired up:
 - Clear search button
 - Detail panel close handlers (backdrop + X button)
 
+### 4. Map Reset Normalization
+**Status**: ✅ Complete
+
+Replaced inconsistent map reset behavior with unified approach using SDK's native `initState` configuration:
+
+#### Problems Solved
+- Routing lines now properly clear on all reset scenarios
+- Map returns to configured initial zoom/position (no more unappealing zoomed-out views)
+- Consistent reset behavior across back button, clear route, and inactivity timeout
+- Reduced code complexity (removed ~40 lines of runtime state capture logic)
+
+#### Implementation Details
+- Added `VITE_INITIAL_MAP_STATE` environment variable support
+- Created unified `resetToInitialState()` method with comprehensive cleanup sequence:
+  1. Clear navigation/routing
+  2. Reset search UI
+  3. Clear line drawings (route visualization)
+  4. Restore to configured state or fallback to `resetMap()`
+  5. 100ms settle delay for stability
+- Updated all reset call sites (MapView back/clear buttons, App timeout handler)
+- Removed obsolete runtime state capture code from WayfinderMap.tsx
+
+#### Files Modified
+- `src/config/env.ts` - Added `initialMapState` configuration property
+- `src/services/WayfinderService.ts` - Added `resetToInitialState()`, removed `restoreInitialState()`
+- `src/components/MapView.tsx` - Updated `handleBack()` and `handleClearRoute()` to use new method
+- `src/App.tsx` - Updated timeout handler to use new method
+- `src/components/WayfinderMap.tsx` - Removed runtime state capture effect
+- `src/store/kioskStore.ts` - Removed `initialMapState` and `setInitialMapState`
+- `.env.example` - Added `VITE_INITIAL_MAP_STATE` documentation
+
+#### Configuration
+To enable consistent resets:
+1. Run dev server and navigate map to desired initial view
+2. Open browser console: `window.wayfinderMap.getState()`
+3. Copy returned state string
+4. Add to `.env`: `VITE_INITIAL_MAP_STATE=<paste-state-here>`
+5. Rebuild application
+
+#### Graceful Fallback
+If `VITE_INITIAL_MAP_STATE` is not configured:
+- Application continues working normally
+- Console warning logged to guide configuration
+- Falls back to SDK's default `resetMap()` behavior
+- Production deployments should configure for optimal UX
+
 ---
 
 ## Pending Tasks

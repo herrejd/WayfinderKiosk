@@ -47,17 +47,14 @@ const AppLayout: React.FC = () => {
   const userPreferences = useKioskStore((state) => state.userPreferences);
 
   // Stable callback for timeout
-  const handleTimeout = useCallback(() => {
+  const handleTimeout = useCallback(async () => {
     console.log('Inactivity timeout - returning to idle screen');
 
-    // Reset the map using resetMap() before restoring state
-    const map = wayfinderService.getInstance();
-    if (map) {
-      map.resetMap();
-    }
+    // Reset the map to initial state with full cleanup
+    await wayfinderService.resetToInitialState();
 
+    // Reset application state to idle
     reset();
-    wayfinderService.restoreInitialState();
   }, [reset]);
 
   // Set up inactivity timer to return to idle screen

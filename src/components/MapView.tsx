@@ -19,7 +19,7 @@ export const MapView: React.FC = () => {
   const setQrCodeUrl = useKioskStore((state) => state.setQrCodeUrl);
   const setFlightSearchQuery = useKioskStore((state) => state.setFlightSearchQuery);
 
-  const handleBack = () => {
+  const handleBack = async () => {
     // Close any open QR code modal
     setQrCodeUrl(null);
 
@@ -29,29 +29,23 @@ export const MapView: React.FC = () => {
     // Clear selected POI
     selectPOI(null);
 
-    // Reset the map using the SDK's built-in reset function
-    const map = wayfinderService.getInstance();
-    if (map) {
-      map.resetMap();
-    }
+    // Reset the map to initial state with full cleanup
+    await wayfinderService.resetToInitialState();
 
     // Hide the map and navigate back to idle screen
     setMapVisible(false);
     setView('idle');
   };
 
-  const handleClearRoute = () => {
+  const handleClearRoute = async () => {
     // Close any open QR code modal
     setQrCodeUrl(null);
 
     // Clear selected POI
     selectPOI(null);
 
-    // Reset the map using the SDK's built-in reset function
-    const map = wayfinderService.getInstance();
-    if (map) {
-      map.resetMap();
-    }
+    // Reset the map to initial state with full cleanup
+    await wayfinderService.resetToInitialState();
 
     // Hide the map and navigate back to directory
     setMapVisible(false);

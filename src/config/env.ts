@@ -64,6 +64,10 @@ export const config = {
 
   // Application Name
   appName: import.meta.env.VITE_APP_NAME || 'Atrius Airport',
+
+  // Initial Map State - static state for consistent resets
+  // Captured once in development, used by all reset scenarios
+  initialMapState: import.meta.env.VITE_INITIAL_MAP_STATE || null,
 } as const;
 
 /**

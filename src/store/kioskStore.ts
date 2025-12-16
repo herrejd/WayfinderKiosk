@@ -24,7 +24,6 @@ export interface KioskState {
   userPreferences: UserPreferences;
   errorMessage: string | null;
   isLoading: boolean;
-  initialMapState: string | null; // Map's initial state for restoration
   qrCodeUrl: string | null; // URL to display as QR code
   flightSearchQuery: string | null; // For flight number searches from idle screen
 
@@ -40,7 +39,6 @@ export interface KioskState {
   setErrorMessage: (message: string | null) => void;
   setLoading: (isLoading: boolean) => void;
   setUserPreferences: (preferences: Partial<UserPreferences>) => void;
-  setInitialMapState: (state: string) => void;
   setFlightSearchQuery: (query: string | null) => void;
   setQrCodeUrl: (url: string | null) => void;
   reset: () => void;
@@ -75,7 +73,6 @@ const initialState: Omit<
   | 'reset'
   | 'setMapVisible'
   | 'setMapReady'
-  | 'setInitialMapState'
   | 'setQrCodeUrl'
   | 'setFlightSearchQuery'
 > = {
@@ -90,7 +87,6 @@ const initialState: Omit<
   userPreferences: defaultUserPreferences,
   errorMessage: null,
   isLoading: false,
-  initialMapState: null,
   qrCodeUrl: null,
   flightSearchQuery: null,
 };
@@ -239,16 +235,6 @@ export const useKioskStore = create<KioskState>()(
           );
         },
 
-        /**
-         * Set the initial map state identifier for later restoration
-         */
-        setInitialMapState: (state: string) => {
-          set({ initialMapState: state }, false, {
-            type: 'setInitialMapState',
-            payload: state,
-          });
-        },
-        
         /**
          * Set the flight search query
          */

@@ -138,6 +138,11 @@ VITE_INACTIVITY_TIMEOUT=60000
 VITE_APP_NAME=Atrius Airport
 ```
 
+**Map Reset Configuration (Optional):**
+```
+VITE_INITIAL_MAP_STATE=  # Captured state for consistent resets
+```
+
 See `.env.example` for complete details and default values.
 
 ### SDK Integration

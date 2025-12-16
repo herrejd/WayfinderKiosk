@@ -26,7 +26,6 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const selectedPOI = useKioskStore((state) => state.selectedPOI);
-  const setInitialMapState = useKioskStore((state) => state.setInitialMapState);
   const flightSearchQuery = useKioskStore((state) => state.flightSearchQuery);
   const setFlightSearchQuery = useKioskStore((state) => state.setFlightSearchQuery);
   const isMapReadyGlobal = useKioskStore((state) => state.isMapReady);
@@ -120,49 +119,6 @@ export const WayfinderMap: React.FC<WayfinderMapProps> = ({
       container.removeEventListener('click', handleLinkClick, true);
     };
   }, [mapReady, setQrCodeUrl]);
-
-  // Effect to capture the initial map state, runs only when map is first ready.
-  useEffect(() => {
-    if (!mapReady) return;
-
-    const map = wayfinderService.getInstance();
-    if (!map) return;
-
-    // Check if we already have a saved state
-    const hasInitialState = useKioskStore.getState().initialMapState;
-    if (hasInitialState) return;
-
-    const on = (map as any).on;
-    if (typeof on !== 'function') return;
-
-    let hasCaptured = false;
-    const initialMoveHandler = () => {
-      if (!hasCaptured) {
-        hasCaptured = true;
-        const stateId = (map as any).getState();
-        if (stateId) {
-          setInitialMapState(stateId);
-          console.log('Initial map state saved.');
-        }
-      }
-    };
-
-    on.call(map, 'moveEnd', initialMoveHandler);
-
-    // Fallback in case moveEnd doesn't fire
-    const fallback = setTimeout(() => {
-      if (!hasCaptured) {
-        hasCaptured = true;
-        const stateId = (map as any).getState();
-        if (stateId) {
-          setInitialMapState(stateId);
-          console.log('Initial map state saved (via fallback).');
-        }
-      }
-    }, 4000);
-
-    return () => clearTimeout(fallback);
-  }, [mapReady, setInitialMapState]);
 
   // Ref to track pending search - prevents cleanup from cancelling
   const pendingSearchRef = useRef<string | null>(null);

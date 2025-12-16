@@ -6,7 +6,6 @@
  * while the headless instance is used for data fetching operations.
  */
 
-import { useKioskStore } from '@/store/kioskStore';
 import { config } from '@/config';
 import type { LMInitSDK, WayfinderMap, WayfinderConfig } from '@/types/wayfinder-sdk';
 
@@ -109,6 +108,17 @@ class WayfinderService {
         (sdkConfig as any)[key] = value;
       });
       console.log('Added POI categories to config:', Object.keys(config.poiCategoriesConfig));
+    }
+
+    // Add initial map state if configured (for consistent resets)
+    if (config.initialMapState) {
+      (sdkConfig as any).initState = config.initialMapState;
+      console.log('Initial map state configured for consistent resets');
+    } else {
+      console.warn(
+        'VITE_INITIAL_MAP_STATE not configured - map resets will use SDK default behavior. ' +
+        'To capture state: Navigate map to desired view and run window.wayfinderMap.getState()'
+      );
     }
 
     // Configure plugins
@@ -251,9 +261,8 @@ class WayfinderService {
    * When config.flightSearchShowUI is true (default), first opens the gate.departures
    * search panel via showSearch(), then performs the search via flightSetSearch()
    * @param query - The flight number or airline code
-   * @param showUI - Override config to control showSearch behavior (optional)
    */
-  flightSearch(query: string, showUI?: boolean): void {
+  flightSearch(query: string): void {
     if (!this.instance) {
       console.warn('flightSearch: No map instance available');
       return;
@@ -261,12 +270,8 @@ class WayfinderService {
 
     const sdkMap = this.instance as any;
 
-    // Use parameter override if provided, otherwise use config
-    const shouldShowUI = showUI !== undefined ? showUI : config.flightSearchShowUI;
-    console.log(`flightSearch: showUI=${shouldShowUI}, config.flightSearchShowUI=${config.flightSearchShowUI}`);
-
     // Step 1: Optionally open the departures search UI first
-    if (shouldShowUI) {
+    if (config.flightSearchShowUI) {
       if (typeof sdkMap.showSearch === 'function') {
         sdkMap.showSearch('gate.departures');
         console.log('showSearch(gate.departures) called to open search UI');
@@ -301,22 +306,70 @@ class WayfinderService {
   }
 
   /**
-   * Restore the map to its saved initial state
+   * Reset map to initial state with comprehensive cleanup
+   * Uses configured initState if available, otherwise falls back to resetMap()
+   * Clears routing lines, navigation, and search UI
    */
-  restoreInitialState(): void {
-    if (this.instance) {
-      const initialMapState = useKioskStore.getState().initialMapState;
-      if (initialMapState) {
-        // Reverting to fire() as the direct setState() call causes a DataCloneError
-        if (typeof (this.instance as any).fire === 'function') {
-          (this.instance as any).fire('setState', { state: initialMapState });
-          console.log('Map state restored to initial state via fire().');
-        } else {
-          console.warn('restoreInitialState: .fire() method not found on instance.');
+  async resetToInitialState(): Promise<void> {
+    if (!this.instance) {
+      console.warn('resetToInitialState: No map instance available');
+      return;
+    }
+
+    const sdkMap = this.instance as any;
+
+    try {
+      // Step 1: Clear any active navigation/routing
+      if (typeof sdkMap.clearNavigation === 'function') {
+        sdkMap.clearNavigation();
+        console.log('Navigation cleared');
+      }
+
+      // Step 2: Reset search UI and results
+      if (typeof sdkMap.resetSearch === 'function') {
+        sdkMap.resetSearch();
+        console.log('Search reset');
+      }
+
+      // Step 3: Clear any drawn lines (routing visualization)
+      if (typeof sdkMap.clearLines === 'function') {
+        // Clear all common line groups used by navigation
+        ['route', 'navigation', 'path', 'directions'].forEach((group) => {
+          try {
+            sdkMap.clearLines(group);
+          } catch (e) {
+            // Ignore errors for non-existent groups
+          }
+        });
+        console.log('Map lines cleared');
+      }
+
+      // Step 4: Restore to initial state or reset to default
+      if (config.initialMapState) {
+        // Use configured initial state
+        if (typeof sdkMap.setState === 'function') {
+          sdkMap.setState(config.initialMapState);
+          console.log('Map restored to configured initial state');
+        } else if (typeof sdkMap.fire === 'function') {
+          // Fallback to fire() method
+          sdkMap.fire('setState', { state: config.initialMapState });
+          console.log('Map restored to configured initial state via fire()');
         }
       } else {
-        console.warn('restoreInitialState: No initial map state saved.');
+        // Fallback to SDK's resetMap if no initial state configured
+        if (typeof this.instance.resetMap === 'function') {
+          this.instance.resetMap();
+          console.log('Map reset using SDK default (configure VITE_INITIAL_MAP_STATE for production)');
+        }
       }
+
+      // Small delay to ensure state transitions complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      console.log('Map reset completed successfully');
+    } catch (error) {
+      console.error('Error during map reset:', error);
+      // Don't throw - best effort reset
     }
   }
 
