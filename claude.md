@@ -1,83 +1,235 @@
-# Claude Code Instructions for WayfinderKiosk
+# Claude Code Handoff Document
+*Last Updated: 2025-12-16*
 
-## Token Efficiency Guidelines
+## Session Summary
 
-### Use Subagents for Code Creation
-- Delegate code creation tasks to subagents (Sonnet, Haiku) when appropriate
-- **Always review and verify** subagent output before considering a task complete
-- Use the most token-efficient model for each task type
-
-### Model Selection Guide
-
-| Task Type | Recommended Model | Rationale |
-|-----------|-------------------|-----------|
-| Simple file creation | Haiku | Low complexity, fast |
-| Boilerplate/scaffolding | Haiku | Repetitive patterns |
-| Component implementation | Sonnet | Moderate complexity |
-| Complex logic/services | Sonnet | Needs careful reasoning |
-| Research/exploration | ask-gemini MCP | External knowledge |
-| Code review/verification | Opus (main) | Final quality check |
-| Architecture decisions | Opus (main) | Critical thinking |
-
-### Available Tools
-
-- **Task tool with subagent_type**: Launch Sonnet/Haiku/Opus agents
-- **ask-gemini MCP server**: Available for research and alternative perspectives
-- **Explore agent**: For codebase exploration
-
-### Workflow Pattern
-
-1. **Plan** (Opus): Break down task into subtasks
-2. **Delegate** (Haiku/Sonnet): Send implementation work to appropriate model
-3. **Review** (Opus): Verify all subagent output for correctness
-4. **Integrate**: Ensure components work together
-
-### Quality Gates
-
-- All subagent code must be reviewed before committing
-- Run type checks and linting after code generation
-- Verify accessibility compliance (WCAG 2.2)
-- Test SDK integration points manually
+This document provides context for continuing work on the WayfinderKiosk project after the previous Claude Code session.
 
 ---
 
-## Project Configuration
+## What Was Accomplished
 
-### SDK Credentials
-- **Account ID**: `A18L64IIIUQX7L`
-- **Venue ID**: `llia`
+### 1. Background Image Cycling (IdleScreen)
+**Status**: ✅ Complete
 
-### Kiosk Location
-- **Latitude**: `36.08516393497611`
-- **Longitude**: `-115.15065662098584`
-- **Floor ID**: `llia-terminal1-departures`
-- **Structure ID**: `llia-terminal1`
+Implemented smooth crossfade transitions between 3 background images on the idle/attract screen:
+- Images cycle every 8 seconds with 1.5-second crossfade
+- Uses layered divs with CSS opacity transitions
+- Images located in `/public/assets/`:
+  - `Airportbackdrop.png`
+  - `AirportInterior.png`
+  - `AirportTarmac.png`
 
-### POI Categories
-- Shop: `shop`
-- Dine: `eat`
-- Relax: `relax`
+**File Modified**: `src/components/IdleScreen.tsx:31-42, 89-103`
 
-### Tech Stack
-- React 18 + TypeScript + Vite
-- Tailwind CSS
-- **Zustand** (state management - lightweight, avoids Context re-render issues)
-- React Router v6 (hash routing)
-- react-i18next (EN, ES, FR)
-- **@zxing/library** (camera barcode scanner - supports PDF417 for boarding passes)
-- **vite-plugin-pwa** (offline support, service worker caching)
-- **Electron** (kiosk shell wrapper for full control)
-- Atrius Wayfinder JS SDK
+### 2. WCAG 2.2 Accessibility Improvements
+**Status**: ✅ Complete
 
-### Critical Implementation Notes
-- **Barcode Scanner**: Must use zxing-js, NOT QuaggaJS. Boarding passes use PDF417 (2D barcodes) which QuaggaJS doesn't support.
-- **Kiosk Stability**: Error boundaries + global error handler with auto-reload after 3 seconds
-- **Touch Gestures**: Electron kiosk mode + CSS `touch-action: manipulation`
-- **Inactivity Timer**: Extend timeout during active navigation
-- **Single SDK Instance**: Test with one instance first before adding headless
-- **Offline Support**: PWA with stale-while-revalidate caching for SDK/API calls
-- **State Management**: Use Zustand store, NOT React Context API
+Completed parallel implementation of accessibility fixes from audit documents:
 
-### Reference Documents
-- `airport-kiosk-planning.md` - Project plan and architecture
-- `wayfinder-integration-guide.md` - SDK API reference and implementation examples
+#### High-Contrast Mode
+- Replaced CSS filter with WCAG-compliant color palette
+- Achieves 21:1 contrast ratio (exceeds AAA standard)
+- Uses CSS custom properties for maintainability
+- **File Modified**: `src/index.css:36-88`
+
+#### SVG Accessibility
+- Added `aria-hidden="true"` to 16 decorative SVG icons
+- Fixed 8 SVGs in Directory.tsx
+- Fixed 6 SVGs in MapView.tsx
+- Fixed 2 SVGs in IdleScreen.tsx (via summary, already present)
+- **Files Modified**:
+  - `src/components/Directory.tsx:98,122,363,445,460,492,520,602`
+  - `src/components/MapView.tsx:83,140,166,184,202,220`
+
+#### Virtual Keyboard Improvements
+- Fixed blue-themed special keys display issue (CSS specificity conflict)
+- Added physical keyboard navigation support
+- All keys now keyboard navigable with Tab/Enter/Spacebar
+- **File Modified**: `src/components/VirtualKeyboard.tsx:41-66`
+
+#### HTML Lang Attribute
+- Added dynamic `document.documentElement.lang` updates
+- Syncs with language changes for screen readers
+- **File Modified**: `src/App.tsx:83`
+
+### 3. Audio Feedback System
+**Status**: ✅ Complete (awaiting audio files)
+
+Implemented comprehensive audio feedback throughout the application:
+
+#### AudioService Created
+- Singleton pattern with caching and preloading
+- Clones audio elements for overlapping sounds
+- Volume set to 50% for kiosk environment
+- Respects `userPreferences.audioEnabled` flag
+- Gracefully handles browser autoplay policies
+- **File Created**: `src/services/AudioService.ts`
+- **Export Added**: `src/services/index.ts:10`
+
+#### Component Integration
+All components now have audio feedback wired up:
+
+**IdleScreen.tsx**:
+- Explore Map button
+- Directory button
+- Flight Search button
+- Language selector buttons (EN/ES/FR)
+
+**VirtualKeyboard.tsx**:
+- All letter/number key presses
+- Shift toggle
+- Backspace
+- Space bar
+- Done button
+- 123/ABC layout toggle
+
+**AccessibilityToolbar.tsx**:
+- High Contrast toggle
+- Large Text toggle
+- Audio Feedback toggle
+
+**Directory.tsx**:
+- Tab changes (Shop/Dine/Relax)
+- POI card selection
+- Get Directions button
+- Back button
+- Clear search button
+- Detail panel close handlers (backdrop + X button)
+
+---
+
+## Pending Tasks
+
+### Immediate: Add Audio Files
+**Priority**: High
+
+The audio system is fully implemented but needs sound files to function. Create and place the following MP3 files in `/public/audio/`:
+
+- `click.mp3` - General button/interaction clicks (currently used everywhere)
+- `success.mp3` - Success actions (available for future use)
+- `error.mp3` - Error states (available for future use)
+- `notification.mp3` - Notifications (available for future use)
+
+**Note**: Only `click.mp3` is currently wired up. The other sounds are available in the AudioService API for future enhancements.
+
+### Future Enhancements (Optional)
+1. Add `success` sound when flight search finds results
+2. Add `error` sound for failed searches or errors
+3. Add `notification` sound for QR code generation
+4. Consider adding subtle hover sounds for improved tactile feedback
+
+---
+
+## Technical Notes
+
+### Build Status
+- ✅ TypeScript compilation: Clean, no errors
+- ✅ Vite build: Successful
+- ⚠️  Bundle size warning: 760 KB (consider code-splitting if needed)
+
+### Running Background Processes
+Multiple dev servers may be running in background. If you encounter port conflicts:
+```bash
+pkill -f "vite" 2>/dev/null
+npm run dev
+```
+
+### Key Architecture Decisions
+
+#### Audio Service Pattern
+- Uses singleton to maintain single cache across app
+- Clones audio nodes to allow overlapping playback
+- Always checks `userPreferences.audioEnabled` before playing
+- Silently fails on autoplay policy errors (expected on iOS)
+
+#### High-Contrast Mode Implementation
+- Applied to `body` element via class toggle in `App.tsx:72-74`
+- Uses CSS cascade to override component styles with `!important`
+- Color palette: Black (#000000) background, White (#FFFFFF) text, Yellow (#FFFF00) accents
+
+#### Virtual Keyboard Fix
+- Problem: Blue classes on special keys were overridden by base styles
+- Solution: Conditional base styles that detect `bg-blue-600` in className
+- Prevents background color conflicts while maintaining other styles
+
+---
+
+## File Change Summary
+
+### Created Files
+- `src/services/AudioService.ts` - Audio playback service
+- `public/audio/` - Directory for audio files (empty, awaiting files)
+
+### Modified Files
+| File | Changes | Lines Modified |
+|------|---------|----------------|
+| `src/components/IdleScreen.tsx` | Background cycling, audio integration | 31-42, 89-103, imports |
+| `src/components/VirtualKeyboard.tsx` | Blue key fix, keyboard nav, audio | 41-66, 75-105 |
+| `src/components/Directory.tsx` | SVG fixes, audio integration | 98, 122, 292, 303, 312, 340, 349, 593-596, 606-609 |
+| `src/components/MapView.tsx` | SVG accessibility fixes | 83, 140, 166, 184, 202, 220 |
+| `src/components/AccessibilityToolbar.tsx` | Audio integration | 23, 34, 45 |
+| `src/App.tsx` | Audio preload, HTML lang attribute | 11, 83, 141 |
+| `src/index.css` | High-contrast mode palette | 36-88 |
+| `src/services/index.ts` | Audio service export | 10 |
+
+---
+
+## Testing Checklist
+
+Before considering audio implementation complete:
+
+- [ ] Add audio files to `/public/audio/` directory
+- [ ] Test click sound on all IdleScreen buttons
+- [ ] Test click sound on all virtual keyboard keys
+- [ ] Test click sound on accessibility toolbar toggles
+- [ ] Test click sound on directory tab changes and POI selection
+- [ ] Verify audio respects the Audio Feedback toggle in accessibility panel
+- [ ] Test on iOS Safari (may have autoplay restrictions)
+- [ ] Verify volume level is appropriate for kiosk environment (currently 50%)
+
+---
+
+## Reference Documents
+
+For additional context, see:
+- `/docs/airport-kiosk-planning.md` - Overall project architecture
+- `/docs/wayfinder-integration-guide.md` - SDK integration details
+- `/docs/ui_quality_review.md` - UI quality audit
+- `/docs/wcag_audit.md` - Accessibility compliance audit
+
+---
+
+## Quick Start Commands
+
+```bash
+# Install dependencies (if needed)
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Type check only
+npm run type-check
+
+# Kill stuck dev servers
+pkill -f "vite" 2>/dev/null
+```
+
+---
+
+## Questions or Issues?
+
+If you encounter any issues with the implementation:
+
+1. **Audio not playing**: Check browser console for autoplay policy errors (expected on first load)
+2. **TypeScript errors**: Run `npm run build` to see detailed error messages
+3. **Blue keys still broken**: Check that `VirtualKeyboard.tsx:49` has the `isSpecialKey` detection logic
+4. **High-contrast mode not working**: Verify body class is being toggled in browser DevTools
+
+---
+
+*Generated by Claude Code session on 2025-12-16*

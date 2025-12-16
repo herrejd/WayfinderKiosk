@@ -27,3 +27,14 @@ npm-debug.log*
 # Cache
 .cache
 .parcel-cache
+
+#Claude AI
+.claude_cache
+.claude_temp
+.claude_sessions
+.claude_logs
+.claude_config
+.claude_tokens
+.claude_history
+claude.
+
