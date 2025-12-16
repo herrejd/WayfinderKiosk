@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { useGlobalErrorHandler } from '@/hooks/useGlobalErrorHandler';
 import { useInactivityTimer } from '@/hooks/useInactivityTimer';
-import { directoryService, wayfinderService } from '@/services';
+import { directoryService, wayfinderService, audioService } from '@/services';
 import { config } from '@/config';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import IdleScreen from '@/components/IdleScreen';
@@ -136,6 +136,9 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
+
+    // Preload audio files for faster playback
+    audioService.preload();
 
     directoryService.initialize().catch((error) => {
       console.error('Failed to initialize directory service:', error);

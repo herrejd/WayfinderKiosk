@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { useKeyboard, useKeyboardInput } from '@/context/KeyboardContext';
+import { audioService } from '@/services';
 
 // Background images to cycle through
 const BACKGROUND_IMAGES = [
@@ -40,11 +41,13 @@ export const IdleScreen: React.FC = () => {
   }, []);
 
   const handleExploreMap = () => {
+    audioService.click();
     setView('map');
     setMapVisible(true);
   };
 
   const handleDirectory = () => {
+    audioService.click();
     setView('directory');
   };
 
@@ -64,6 +67,7 @@ export const IdleScreen: React.FC = () => {
       formattedQuery = trimmedQuery;
     }
 
+    audioService.click();
     console.log(`[IdleScreen] Flight search submitted: "${formattedQuery}"`);
     setFlightSearchQuery(formattedQuery);
     setView('map');
@@ -71,6 +75,7 @@ export const IdleScreen: React.FC = () => {
   };
 
   const handleLanguageChange = (lang: 'en' | 'es' | 'fr') => {
+    audioService.click();
     setLanguage(lang);
     i18n.changeLanguage(lang);
   };

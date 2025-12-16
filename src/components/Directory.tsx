@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { useKioskStore } from '@/store/kioskStore';
-import { directoryService, DirectoryPOI } from '@/services';
+import { directoryService, audioService, DirectoryPOI } from '@/services';
 import { parseFloorId } from '@/utils/floorParser';
 import { useKeyboard } from '@/context/KeyboardContext';
 import type { POI } from '@/types/wayfinder';
@@ -289,6 +289,7 @@ export default function Directory() {
    * Handle tab change
    */
   const handleTabChange = (tab: TabType) => {
+    audioService.click();
     setActiveTab(tab);
     setSearchQuery('');
     setSelectedPOI(null);
@@ -299,6 +300,7 @@ export default function Directory() {
    * Handle POI selection (memoized for stable reference)
    */
   const handlePOIClick = useCallback((poi: DirectoryPOI) => {
+    audioService.click();
     setSelectedPOI(poi);
     updateInteraction();
   }, [updateInteraction]);
@@ -307,6 +309,7 @@ export default function Directory() {
    * Handle "Get Directions" action
    */
   const handleGetDirections = () => {
+    audioService.click();
     if (selectedPOI) {
       // Convert SDKPOI to POI format for store
       const storePOI: POI = {
@@ -334,6 +337,7 @@ export default function Directory() {
    * Handle back button
    */
   const handleBack = () => {
+    audioService.click();
     setView('idle');
     updateInteraction();
   };
@@ -342,6 +346,7 @@ export default function Directory() {
    * Clear search
    */
   const handleClearSearch = () => {
+    audioService.click();
     setSearchQuery('');
     updateInteraction();
   };
@@ -585,7 +590,10 @@ export default function Directory() {
       {selectedPOI && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
-          onClick={() => setSelectedPOI(null)}
+          onClick={() => {
+            audioService.click();
+            setSelectedPOI(null);
+          }}
         >
           <div
             className="bg-white w-full max-w-2xl rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto"
@@ -595,7 +603,10 @@ export default function Directory() {
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">{selectedPOI.name}</h2>
               <button
-                onClick={() => setSelectedPOI(null)}
+                onClick={() => {
+                  audioService.click();
+                  setSelectedPOI(null);
+                }}
                 className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                 aria-label="Close details"
               >

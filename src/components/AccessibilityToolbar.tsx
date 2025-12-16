@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
+import { audioService } from '@/services';
 
 /**
  * Accessibility Toolbar Component
@@ -19,6 +20,7 @@ export const AccessibilityToolbar: React.FC = () => {
   const setUserPreferences = useKioskStore((state) => state.setUserPreferences);
 
   const handleHighContrastToggle = () => {
+    audioService.click();
     setUserPreferences({
       accessibility: {
         ...userPreferences.accessibility,
@@ -29,6 +31,7 @@ export const AccessibilityToolbar: React.FC = () => {
   };
 
   const handleLargeTextToggle = () => {
+    audioService.click();
     setUserPreferences({
       accessibility: {
         ...userPreferences.accessibility,
@@ -39,6 +42,7 @@ export const AccessibilityToolbar: React.FC = () => {
   };
 
   const handleAudioToggle = () => {
+    audioService.click();
     setUserPreferences({
       audioEnabled: !userPreferences.audioEnabled,
     });

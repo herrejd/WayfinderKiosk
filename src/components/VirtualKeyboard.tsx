@@ -7,6 +7,7 @@
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKeyboard } from '@/context/KeyboardContext';
+import { audioService } from '@/services';
 
 type KeyboardLayout = 'letters' | 'numbers';
 
@@ -44,6 +45,13 @@ const KeyButton = memo(function KeyButton({
     }
   }, [onClick]);
 
+  // Check if this is a special key (blue styling) by looking for blue-600 in className
+  const isSpecialKey = className.includes('bg-blue-600');
+
+  const baseStyles = isSpecialKey
+    ? 'flex items-center justify-center rounded-lg font-semibold transition-all duration-150 min-h-[56px] min-w-[48px] shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+    : 'flex items-center justify-center bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-300 rounded-lg text-gray-800 font-semibold transition-all duration-150 min-h-[56px] min-w-[48px] shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2';
+
   return (
     <button
       type="button"
@@ -51,17 +59,7 @@ const KeyButton = memo(function KeyButton({
       onKeyDown={handleKeyDown}
       aria-label={ariaLabel || label}
       tabIndex={0}
-      className={`
-        flex items-center justify-center
-        bg-white hover:bg-gray-50 active:bg-gray-100
-        border border-gray-300 rounded-lg
-        text-gray-800 font-semibold
-        transition-all duration-150
-        min-h-[56px] min-w-[48px]
-        shadow-md hover:shadow-lg
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-        ${className}
-      `}
+      className={`${baseStyles} ${className}`}
     >
       {label}
     </button>
@@ -75,28 +73,34 @@ export const VirtualKeyboard = memo(function VirtualKeyboard() {
   const [isShift, setIsShift] = useState(false);
 
   const handleKeyPress = useCallback((key: string) => {
+    audioService.click();
     const newValue = inputValue + (isShift ? key.toUpperCase() : key.toLowerCase());
     updateValue(newValue);
     if (isShift) setIsShift(false);
   }, [inputValue, updateValue, isShift]);
 
   const handleBackspace = useCallback(() => {
+    audioService.click();
     updateValue(inputValue.slice(0, -1));
   }, [inputValue, updateValue]);
 
   const handleSpace = useCallback(() => {
+    audioService.click();
     updateValue(inputValue + ' ');
   }, [inputValue, updateValue]);
 
   const handleDone = useCallback(() => {
+    audioService.click();
     hideKeyboard();
   }, [hideKeyboard]);
 
   const toggleLayout = useCallback(() => {
+    audioService.click();
     setLayout(prev => prev === 'letters' ? 'numbers' : 'letters');
   }, []);
 
   const toggleShift = useCallback(() => {
+    audioService.click();
     setIsShift(prev => !prev);
   }, []);
 
