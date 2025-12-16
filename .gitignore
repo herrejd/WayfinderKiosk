@@ -36,5 +36,7 @@ npm-debug.log*
 .claude_config
 .claude_tokens
 .claude_history
-claude.
+claude.*
 
+# Docs
+./docs/**/*

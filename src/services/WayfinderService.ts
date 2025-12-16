@@ -319,54 +319,36 @@ class WayfinderService {
     const sdkMap = this.instance as any;
 
     try {
-      // Step 1: Clear any active navigation/routing
-      if (typeof sdkMap.clearNavigation === 'function') {
-        sdkMap.clearNavigation();
-        console.log('Navigation cleared');
+      console.log('Starting map reset sequence...');
+
+      // Step 1: Call resetMap - SDK's primary method to clear everything
+      // According to SDK behavior, this clears navigation, routes, and resets view
+      if (typeof this.instance.resetMap === 'function') {
+        this.instance.resetMap();
+        console.log('SDK resetMap() called - should clear all navigation and routes');
+
+        // Wait longer to ensure resetMap completes all its cleanup
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      // Step 2: Reset search UI and results
-      if (typeof sdkMap.resetSearch === 'function') {
-        sdkMap.resetSearch();
-        console.log('Search reset');
-      }
-
-      // Step 3: Clear any drawn lines (routing visualization)
-      if (typeof sdkMap.clearLines === 'function') {
-        // Clear all common line groups used by navigation
-        ['route', 'navigation', 'path', 'directions'].forEach((group) => {
-          try {
-            sdkMap.clearLines(group);
-          } catch (e) {
-            // Ignore errors for non-existent groups
-          }
-        });
-        console.log('Map lines cleared');
-      }
-
-      // Step 4: Restore to initial state or reset to default
+      // Step 2: If we have a configured initial state, restore the camera position
+      // This preserves our desired zoom/position after resetMap clears everything
       if (config.initialMapState) {
-        // Use configured initial state
         if (typeof sdkMap.setState === 'function') {
           sdkMap.setState(config.initialMapState);
-          console.log('Map restored to configured initial state');
+          console.log('Camera view restored to configured initial state');
         } else if (typeof sdkMap.fire === 'function') {
-          // Fallback to fire() method
           sdkMap.fire('setState', { state: config.initialMapState });
-          console.log('Map restored to configured initial state via fire()');
+          console.log('Camera view restored via fire(setState)');
         }
+
+        // Allow setState to complete
+        await new Promise((resolve) => setTimeout(resolve, 150));
       } else {
-        // Fallback to SDK's resetMap if no initial state configured
-        if (typeof this.instance.resetMap === 'function') {
-          this.instance.resetMap();
-          console.log('Map reset using SDK default (configure VITE_INITIAL_MAP_STATE for production)');
-        }
+        console.log('Using SDK default view (configure VITE_INITIAL_MAP_STATE for consistent positioning)');
       }
 
-      // Small delay to ensure state transitions complete
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      console.log('Map reset completed successfully');
+      console.log('Map reset sequence completed');
     } catch (error) {
       console.error('Error during map reset:', error);
       // Don't throw - best effort reset

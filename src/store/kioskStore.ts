@@ -53,7 +53,7 @@ const defaultUserPreferences: UserPreferences = {
     highContrast: false,
     largeText: false,
   },
-  audioEnabled: true,
+  audioEnabled: false,
 };
 
 /**
