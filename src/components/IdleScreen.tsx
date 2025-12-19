@@ -1,8 +1,8 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useKioskStore } from '@/store/kioskStore';
 import { useKeyboard, useKeyboardInput } from '@/context/KeyboardContext';
-import { audioService } from '@/services';
+import { audioService, directoryService, type SecurityWaitTime } from '@/services';
 
 // Background images to cycle through
 const BACKGROUND_IMAGES = [
@@ -13,6 +13,152 @@ const BACKGROUND_IMAGES = [
 
 const CYCLE_INTERVAL = 8000; // 8 seconds between transitions
 const TRANSITION_DURATION = 1500; // 1.5 second crossfade
+
+/**
+ * Security Wait Time Display Component
+ * Shows current wait times for security checkpoints
+ * Memoized to prevent unnecessary re-renders when parent updates
+ */
+const SecurityWaitTimes = memo(function SecurityWaitTimes() {
+  const [waitTimes, setWaitTimes] = useState<SecurityWaitTime[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchWaitTimes() {
+      try {
+        const times = await directoryService.getSecurityWaitTimes();
+        if (mounted) {
+          setWaitTimes(times);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError('Unable to load wait times');
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchWaitTimes();
+
+    // Refresh wait times every 2 minutes
+    const interval = setInterval(fetchWaitTimes, 2 * 60 * 1000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Don't render if no data or error
+  if (loading || error || waitTimes.length === 0) {
+    return null;
+  }
+
+  // Get color based on wait time
+  const getWaitTimeColor = (minutes: number, isClosed: boolean) => {
+    if (isClosed) return 'text-red-600';
+    if (minutes <= 10) return 'text-green-600';
+    if (minutes <= 20) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  // Get background color based on wait time
+  const getWaitTimeBgColor = (minutes: number, isClosed: boolean) => {
+    if (isClosed) return 'bg-red-100';
+    if (minutes <= 10) return 'bg-green-100';
+    if (minutes <= 20) return 'bg-yellow-100';
+    return 'bg-red-100';
+  };
+
+  // Format queue type for display
+  const formatQueueType = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'clear':
+        return 'CLEAR';
+      case 'precheck':
+      case 'tsa_precheck':
+        return 'TSA PreCheck';
+      case 'tsa':
+      case 'standard':
+      default:
+        return 'Standard';
+    }
+  };
+
+  return (
+    <div
+      className="absolute top-8 right-8 bg-white/95 rounded-2xl shadow-xl p-4 min-w-[280px]"
+      role="region"
+      aria-label="Security checkpoint wait times"
+    >
+      <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        Security Wait Times
+      </h2>
+
+      <div className="space-y-2">
+        {waitTimes.map((wt) => (
+          <div
+            key={wt.id}
+            className={`flex items-center justify-between p-3 rounded-lg ${getWaitTimeBgColor(wt.waitTimeMinutes, wt.isTemporarilyClosed)}`}
+          >
+            <div className="flex flex-col">
+              <span className="font-semibold text-gray-800">{wt.name}</span>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>{formatQueueType(wt.queueType)}</span>
+                {wt.location && (
+                  <>
+                    <span className="text-gray-300">|</span>
+                    <span className="flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                      </svg>
+                      {wt.location}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className={`text-2xl font-bold ${getWaitTimeColor(wt.waitTimeMinutes, wt.isTemporarilyClosed)}`}>
+              {wt.isTemporarilyClosed ? (
+                <span className="text-base">Closed</span>
+              ) : (
+                <>
+                  {wt.waitTimeMinutes}
+                  <span className="text-sm font-normal ml-1">min</span>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Real-time indicator */}
+      {waitTimes.some((wt) => wt.isRealTime) && (
+        <div className="mt-3 flex items-center gap-1 text-xs text-gray-500">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          Live data
+        </div>
+      )}
+    </div>
+  );
+});
 
 export const IdleScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -117,6 +263,9 @@ export const IdleScreen: React.FC = () => {
           {t('idle.subtitle')}
         </p>
       </header>
+
+      {/* Security Wait Times - Top Right */}
+      <SecurityWaitTimes />
 
       {/* Main Action Buttons */}
       <main className={`flex flex-col gap-8 mt-16 transition-all duration-300 ${keyboardPadding} relative z-10`}>
